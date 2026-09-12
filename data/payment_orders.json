@@ -1,0 +1,24 @@
+[
+  {
+    "orderId": "order_cad_1788279010553_1d66401e",
+    "userId": "test_engineer_uid_001",
+    "plan": "pro",
+    "amount": 169,
+    "currency": "INR",
+    "status": "failed",
+    "createdAt": "2026-09-01T16:10:10.553Z",
+    "provider": "cadvanta_gateway"
+  },
+  {
+    "orderId": "order_cad_1788279014285_e8be4a81",
+    "userId": "test_engineer_uid_002",
+    "plan": "pro",
+    "amount": 169,
+    "currency": "INR",
+    "status": "paid",
+    "createdAt": "2026-09-01T16:10:14.285Z",
+    "provider": "cadvanta_gateway",
+    "paymentId": "pay_genuine_12345",
+    "paidAt": "2026-09-01T16:10:14.344Z"
+  }
+]

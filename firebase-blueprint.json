@@ -1,0 +1,23 @@
+{
+  "entities": {
+    "UserProfile": {
+      "collection": "users",
+      "fields": {
+        "id": { "type": "string", "description": "Firebase Authentication UID" },
+        "displayName": { "type": "string", "description": "User full name or display name" },
+        "email": { "type": "string", "description": "User email address if available" },
+        "phoneNumber": { "type": "string", "description": "User phone number with country code" },
+        "photoURL": { "type": "string", "description": "Profile picture avatar URL" },
+        "providerId": { "type": "string", "description": "Authentication provider (google.com, phone, etc.)" },
+        "createdAt": { "type": "string", "description": "ISO timestamp of account creation" },
+        "lastLoginAt": { "type": "string", "description": "ISO timestamp of most recent login" },
+        "role": { "type": "string", "description": "Role tier (user, pro, engineer)" },
+        "plan": { "type": "string", "description": "Subscription tier (free, pro)" },
+        "pro": { "type": "boolean", "description": "Authoritative PRO status boolean" },
+        "proActivatedAt": { "type": "string", "description": "ISO timestamp of PRO server-verified activation" },
+        "proOrderId": { "type": "string", "description": "Server-side payment order ID" },
+        "proPaymentId": { "type": "string", "description": "Payment gateway transaction reference" }
+      }
+    }
+  }
+}

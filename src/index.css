@@ -1,0 +1,208 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --bg-primary: #030A07;
+    --bg-secondary: #071510;
+    --bg-surface: #0B1E17;
+    --bg-elevated: #102B21;
+    --accent-mint: #00F5A0;
+    --accent-mint-hover: #34EEA9;
+    --accent-mint-glow: rgba(0, 245, 160, 0.25);
+    --forest-1: #E0FDF4;
+    --forest-2: #A7F3D0;
+    --forest-3: #6EE7B7;
+    --text-primary: #F0FDF4;
+    --text-secondary: #8CA89E;
+    --text-muted: #4E6B60;
+    --border-forest: rgba(16, 185, 129, 0.18);
+    --border-mint-hover: rgba(0, 245, 160, 0.45);
+  }
+
+  html.light, [data-theme="light"] {
+    --bg-primary: #F4F6F8;
+    --bg-secondary: #FFFFFF;
+    --bg-surface: #F8FAFC;
+    --bg-elevated: #EBF0F5;
+    --accent-mint: #00B377;
+    --accent-mint-hover: #00C885;
+    --accent-mint-glow: rgba(0, 179, 119, 0.2);
+    --forest-1: #0F172A;
+    --forest-2: #1E293B;
+    --forest-3: #334155;
+    --text-primary: #0F172A;
+    --text-secondary: #475569;
+    --text-muted: #64748B;
+    --border-forest: #E2E8F0;
+    --border-mint-hover: #00B377;
+  }
+
+  body {
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background-color: #030A07;
+    color: #F0FDF4;
+    margin: 0;
+    overflow: hidden;
+  }
+
+  code, pre, .font-mono {
+    font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  }
+
+  ::selection {
+    background-color: #00F5A0;
+    color: #030A07;
+  }
+}
+
+/* Engineering CAD scrollbar styling for deep emerald workstation */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: #030A07;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #0E261D;
+  border: 1px solid rgba(16, 185, 129, 0.18);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #1B4536;
+}
+
+/* Hide scrollbar for clean horizontal chip bars */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Electric Mint subtle pulsing animation for AI Engine & VIRA Bot */
+@keyframes pulse-mint {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(0, 245, 160, 0.4);
+  }
+  50% {
+    opacity: 0.85;
+    transform: scale(1.03);
+    box-shadow: 0 0 14px 3px rgba(0, 245, 160, 0.25);
+  }
+}
+
+.animate-pulse-mint {
+  animation: pulse-mint 2.2s infinite ease-in-out;
+}
+
+/* Engineering blueprint grid background in Emerald-Mint tone */
+.bg-cad-grid {
+  background-size: 32px 32px;
+  background-image: 
+    linear-gradient(to right, rgba(16, 185, 129, 0.08) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(16, 185, 129, 0.08) 1px, transparent 1px);
+}
+
+/* Radiant atmospheric emerald ambient glow */
+.bg-emerald-glow {
+  background-image: 
+    radial-gradient(circle at 65% 25%, rgba(0, 245, 160, 0.12) 0%, rgba(16, 185, 129, 0.06) 35%, transparent 70%),
+    radial-gradient(circle at 15% 75%, rgba(5, 150, 105, 0.08) 0%, transparent 60%);
+}
+
+/* ========================================================================= */
+/* LIGHT THEME RULES & OVERRIDES                                             */
+/* ========================================================================= */
+html.light body {
+  background-color: #F1F5F9;
+  color: #0F172A;
+}
+
+html.light .bg-\[\#030A07\] {
+  background-color: #F1F5F9 !important;
+}
+html.light .bg-\[\#030A07\]\/70,
+html.light .bg-\[\#030A07\]\/80,
+html.light .bg-\[\#030A07\]\/90 {
+  background-color: rgba(241, 245, 249, 0.88) !important;
+}
+
+html.light .bg-\[\#071510\] {
+  background-color: #FFFFFF !important;
+}
+html.light .bg-\[\#071510\]\/95,
+html.light .bg-\[\#071510\]\/98 {
+  background-color: rgba(255, 255, 255, 0.98) !important;
+}
+
+html.light .bg-\[\#0B1E17\] {
+  background-color: #F8FAFC !important;
+}
+html.light .bg-\[\#0B1E17\]\/90,
+html.light .bg-\[\#0B1E17\]\/95 {
+  background-color: rgba(248, 250, 252, 0.96) !important;
+}
+
+html.light .bg-\[\#102B21\] {
+  background-color: #E2E8F0 !important;
+}
+html.light .bg-\[\#16382B\] {
+  background-color: #CBD5E1 !important;
+}
+
+html.light .text-\[\#F0FDF4\],
+html.light .text-\[\#F2F5F6\] {
+  color: #0F172A !important;
+}
+html.light .text-\[\#8CA89E\],
+html.light .text-\[\#6F7C83\] {
+  color: #475569 !important;
+}
+html.light .text-\[\#4E6B60\] {
+  color: #64748B !important;
+}
+
+html.light .border-\[rgba\(16\,185\,129\,0\.18\)\],
+html.light .border-\[rgba\(16\,185\,129\,0\.2\)\],
+html.light .border-\[rgba\(16\,185\,129\,0\.25\)\],
+html.light .border-\[rgba\(16\,185\,129\,0\.28\)\],
+html.light .border-\[rgba\(16\,185\,129\,0\.3\)\] {
+  border-color: #E2E8F0 !important;
+}
+
+html.light .border-\[rgba\(16\,185\,129\,0\.12\)\],
+html.light .border-\[rgba\(16\,185\,129\,0\.15\)\],
+html.light .border-\[rgba\(16\,185\,129\,0\.1\)\] {
+  border-color: #EEF2F6 !important;
+}
+
+html.light .bg-cad-grid {
+  background-image: 
+    linear-gradient(to right, rgba(15, 23, 42, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(15, 23, 42, 0.05) 1px, transparent 1px) !important;
+}
+
+html.light .bg-emerald-glow {
+  background-image: 
+    radial-gradient(circle at 65% 25%, rgba(16, 185, 129, 0.08) 0%, transparent 70%),
+    radial-gradient(circle at 15% 75%, rgba(5, 150, 105, 0.05) 0%, transparent 60%) !important;
+}
+
+html.light ::-webkit-scrollbar-track {
+  background: #F1F5F9;
+}
+html.light ::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border: 1px solid #94A3B8;
+}
+
+
+
+

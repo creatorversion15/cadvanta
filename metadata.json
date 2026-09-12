@@ -1,0 +1,8 @@
+{
+  "name": "CADVANTA — AI Mechanical Design & CAD System",
+  "description": "Parametric 3D CAD modeling and mechanical engineering platform with VIRA Personalized AI Assistant, created by Viraj Bansod. Features deep obsidian and emerald-mint precision engineering interface, instant 3D geometry generation, high-resolution transparent-background viewport capture for documentation, bidirectional Metric (mm/kg) and Imperial (in/lb) unit conversion toggle with automatic parameter scaling, formal PDF summary reports for Material Costs and Engineering Checks, DFM validation, ₹1.69 Pro subscription with UPI unlock (9420482152-2@ybl) for hard design engines & VIRA AI, engineering calculations, ISO technical drawings, and multi-format CAD exports.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
