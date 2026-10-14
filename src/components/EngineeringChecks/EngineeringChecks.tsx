@@ -1,9 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { CADPart, EngineeringCheck, BOMItem, DFMAnalysisResult, GDTFeature, EngineeringCalculationResult } from '../../types/cad';
 import { runEngineeringValidation } from '../../engine/engineeringValidator';
 import { runComprehensiveCalculations } from '../../engineering/engineeringCalculations';
 import { generateBOM, runDFMAnalysis, getGDTFeatures } from '../../validation/dfmValidator';
 import { generateEngineeringChecksPDF } from '../../engine/pdfReportGenerator';
+import {
+  isImperial,
+  formatMass,
+  formatStress,
+  formatTolerance,
+  convertCalculationOutput,
+  convertDimensionsString,
+} from '../../utils/unitConversion';
 import {
   ShieldCheck,
   AlertTriangle,
@@ -23,26 +31,38 @@ interface EngineeringChecksProps {
   onOpenModal?: () => void;
 }
 
-export const EngineeringChecks: React.FC<EngineeringChecksProps> = ({
+export const EngineeringChecks: React.FC<EngineeringChecksProps> = React.memo(({
   part,
   onApplyFix,
   onOpenModal,
 }) => {
   const [subTab, setSubTab] = useState<'checks' | 'fea' | 'bom' | 'dfm'>('checks');
 
-  const geometricChecks: EngineeringCheck[] = runEngineeringValidation(part);
-  const calculations: EngineeringCalculationResult[] = runComprehensiveCalculations(part);
-  const bomItems: BOMItem[] = generateBOM(part);
-  const dfm: DFMAnalysisResult = runDFMAnalysis(part);
-  const gdt: GDTFeature[] = getGDTFeatures(part);
+  // Memoize heavy validation & calculations so subtab navigation is instantaneous
+  const { geometricChecks, calculations, bomItems, dfm, gdt } = useMemo(() => {
+    return {
+      geometricChecks: runEngineeringValidation(part),
+      calculations: runComprehensiveCalculations(part),
+      bomItems: generateBOM(part),
+      dfm: runDFMAnalysis(part),
+      gdt: getGDTFeatures(part),
+    };
+  }, [part]);
 
   const hasErrors = geometricChecks.some((c) => c.severity === 'error');
   const hasWarnings = geometricChecks.some((c) => c.severity === 'warning');
 
-  const totalCost = bomItems.reduce((acc, it) => acc + (it.totalCostInr || (it.totalCostUsd ? it.totalCostUsd * 83 : 0)), 0);
-  const totalMass = bomItems.reduce((acc, it) => acc + it.totalMassKg, 0);
+  const totalCost = useMemo(() => {
+    return bomItems.reduce((acc, it) => acc + (it.totalCostInr || (it.totalCostUsd ? it.totalCostUsd * 83 : 0)), 0);
+  }, [bomItems]);
 
-  const primaryFos = calculations.find((c) => c.factorOfSafety !== undefined)?.factorOfSafety || 2.5;
+  const totalMass = useMemo(() => {
+    return bomItems.reduce((acc, it) => acc + it.totalMassKg, 0);
+  }, [bomItems]);
+
+  const primaryFos = useMemo(() => {
+    return calculations.find((c) => c.factorOfSafety !== undefined)?.factorOfSafety || 2.5;
+  }, [calculations]);
 
   return (
     <div className="w-full h-full flex flex-col bg-white rounded-lg border border-zinc-300 shadow-sm overflow-hidden text-black">
@@ -213,7 +233,7 @@ export const EngineeringChecks: React.FC<EngineeringChecksProps> = ({
             <div className="text-right">
               <div className="text-[10px] font-mono text-zinc-500 uppercase">Yield Strength</div>
               <div className="text-base font-bold font-mono text-black">
-                {part.material.yieldStrength} MPa
+                {formatStress(part.material.yieldStrength, part.units)}
               </div>
               <div className="text-[10px] text-zinc-600">{part.material.name}</div>
             </div>
@@ -232,12 +252,15 @@ export const EngineeringChecks: React.FC<EngineeringChecksProps> = ({
 
                 {/* Outputs grid */}
                 <div className="grid grid-cols-2 gap-2 text-[11px] font-mono py-1">
-                  {Object.entries(calc.outputs).slice(0, 4).map(([key, out]) => (
-                    <div key={key}>
-                      <span className="text-zinc-500">{out.label}: </span>
-                      <span className="text-black font-bold">{out.value}</span> {out.unit}
-                    </div>
-                  ))}
+                  {Object.entries(calc.outputs).slice(0, 4).map(([key, out]) => {
+                    const converted = convertCalculationOutput(out as any, part.units);
+                    return (
+                      <div key={key}>
+                        <span className="text-zinc-500">{converted.label}: </span>
+                        <span className="text-black font-bold">{converted.value}</span> {converted.unit}
+                      </div>
+                    );
+                  })}
                 </div>
 
                 <div className="text-[10px] text-zinc-600 font-mono pt-1">
@@ -258,7 +281,7 @@ export const EngineeringChecks: React.FC<EngineeringChecksProps> = ({
           <div className="flex items-center justify-between p-2.5 bg-zinc-50 border border-zinc-200 rounded-lg font-mono text-xs">
             <div>
               <span className="text-zinc-600">Total Mass: </span>
-              <span className="text-black font-bold">{totalMass.toFixed(2)} kg</span>
+              <span className="text-black font-bold">{formatMass(totalMass, part.units)}</span>
             </div>
             <div>
               <span className="text-zinc-600">Est. Unit Cost: </span>
@@ -280,10 +303,10 @@ export const EngineeringChecks: React.FC<EngineeringChecksProps> = ({
                   )}
                 </div>
                 <div className="text-[10px] text-zinc-600 pt-1 font-sans">
-                  <span className="text-zinc-500">Process: </span>{item.manufacturingMethod}
+                  <span className="text-zinc-500">Process: </span>{item.manufacturingMethod} | <span className="text-zinc-500">Mass: </span>{formatMass(item.totalMassKg, part.units)}
                 </div>
                 <div className="flex justify-between items-center pt-1.5 text-[11px] border-t border-zinc-200 mt-1.5">
-                  <span className="text-zinc-600">{item.dimensions}</span>
+                  <span className="text-zinc-600">{convertDimensionsString(item.dimensions, part.units)}</span>
                   <span className="text-black font-bold">₹{(item.totalCostInr || (item.totalCostUsd ? item.totalCostUsd * 83 : 0)).toFixed(2)} INR</span>
                 </div>
               </div>
@@ -331,7 +354,7 @@ export const EngineeringChecks: React.FC<EngineeringChecksProps> = ({
                   <div className="flex items-center justify-between text-zinc-900 font-semibold">
                     <span className="text-[11px]">{g.featureName}</span>
                     <span className="text-black bg-zinc-100 px-1.5 py-0.5 rounded border border-zinc-300 text-[10px] font-bold">
-                      {g.symbol} | ⌖ {g.toleranceMm} mm
+                      {g.symbol} | ⌖ ±{formatTolerance(g.toleranceMm, part.units)}
                     </span>
                   </div>
                   <div className="text-[10px] text-zinc-600 font-sans pt-1">
@@ -362,4 +385,4 @@ export const EngineeringChecks: React.FC<EngineeringChecksProps> = ({
       </div>
     </div>
   );
-};
+});

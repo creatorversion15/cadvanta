@@ -49,7 +49,7 @@ const INITIAL_SEED_PROJECTS: Array<{ type: PartType; name: string; dateOffsetDay
   { type: 'pulley', name: 'Dual-Groove V-Belt Power Transmission Pulley (Al 7075)', dateOffsetDays: 12 },
 ];
 
-export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
+export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = React.memo(({
   onOpenProject,
   onNewProject,
   onClose,
@@ -67,9 +67,11 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [notification, setNotification] = useState<string | null>(null);
 
-  // Load and seed projects
-  const loadProjects = async () => {
-    setIsLoading(true);
+  // Load and seed projects with smooth background caching
+  const loadProjects = async (silent = false) => {
+    if (!silent && projects.length === 0) {
+      setIsLoading(true);
+    }
     try {
       let records = await getAllProjectsOffline();
 
@@ -213,41 +215,39 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
   ];
 
   return (
-    <div className="w-full min-h-[calc(100vh-4rem)] p-4 sm:p-6 lg:p-8 bg-[#020D08] text-[#F0FDF4] transition-colors">
+    <div className="w-full min-h-[calc(100vh-4rem)] p-3.5 sm:p-6 lg:p-8 bg-[#020D08] text-[#F0FDF4] transition-colors pb-24 lg:pb-8">
       {/* Toast Notification */}
       {notification && (
-        <div className="fixed top-20 right-6 z-50 px-4 py-2.5 bg-[#102B21] border border-[#00F5A0] rounded-lg shadow-xl text-xs font-mono text-[#00F5A0] flex items-center gap-2 animate-in fade-in slide-in-from-top-2">
+        <div className="fixed top-20 right-4 sm:right-6 z-50 px-4 py-2.5 bg-[#102B21] border border-[#00F5A0] rounded-lg shadow-xl text-xs font-mono text-[#00F5A0] flex items-center gap-2 animate-in fade-in slide-in-from-top-2">
           <Check className="w-4 h-4 text-[#00F5A0]" />
           <span>{notification}</span>
         </div>
       )}
 
       {/* Main Container */}
-      <div className="max-w-7xl mx-auto space-y-6">
+      <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
         {/* Header Title & Actions */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[rgba(16,185,129,0.15)] pb-5">
-          <div>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-[#00F5A0]/10 border border-[#00F5A0]/30 flex items-center justify-center">
-                <Box className="w-5 h-5 text-[#00F5A0]" />
-              </div>
-              <div>
-                <h1 className="text-xl sm:text-2xl font-bold font-mono text-[#F0FDF4] tracking-tight">
-                  Projects & Dashboard
-                </h1>
-                <p className="text-xs sm:text-sm text-[#8CA89E] font-mono mt-0.5">
-                  Manage, search, filter, and inspect parametric mechanical CAD parts & assemblies
-                </p>
-              </div>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 border-b border-[rgba(16,185,129,0.15)] pb-4 sm:pb-5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[#00F5A0]/10 border border-[#00F5A0]/30 flex items-center justify-center shrink-0">
+              <Box className="w-5 h-5 text-[#00F5A0]" />
+            </div>
+            <div>
+              <h1 className="text-lg sm:text-xl md:text-2xl font-bold font-mono text-[#F0FDF4] tracking-tight">
+                Projects & Dashboard
+              </h1>
+              <p className="text-[11px] sm:text-xs text-[#8CA89E] font-mono mt-0.5">
+                Manage, search, filter, and inspect parametric mechanical CAD parts
+              </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5 shrink-0">
+          <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
             {onClose && (
               <button
                 id="btn-back-to-cad"
                 onClick={onClose}
-                className="px-3 py-2 rounded-lg bg-[#0B1E17] hover:bg-[#102B21] border border-[rgba(16,185,129,0.25)] text-xs font-mono text-[#8CA89E] hover:text-[#F0FDF4] transition-colors cursor-pointer flex items-center gap-1.5"
+                className="flex-1 sm:flex-none px-3 py-2.5 min-h-[42px] rounded-lg bg-[#0B1E17] hover:bg-[#102B21] border border-[rgba(16,185,129,0.25)] text-xs font-mono text-[#8CA89E] hover:text-[#F0FDF4] transition-colors cursor-pointer flex items-center justify-center gap-1.5"
               >
                 <span>Back to 3D CAD</span>
               </button>
@@ -256,7 +256,7 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
             <button
               id="btn-new-project"
               onClick={() => onNewProject('shaft')}
-              className="px-4 py-2 rounded-lg bg-gradient-to-r from-[#00F5A0] to-[#00D98B] hover:brightness-110 text-[#02140D] text-xs font-mono font-bold transition-all shadow-md hover:shadow-[#00F5A0]/20 flex items-center gap-2 cursor-pointer"
+              className="flex-1 sm:flex-none px-4 py-2.5 min-h-[42px] rounded-lg bg-gradient-to-r from-[#00F5A0] to-[#00D98B] hover:brightness-110 text-[#02140D] text-xs font-mono font-bold transition-all shadow-md hover:shadow-[#00F5A0]/20 flex items-center justify-center gap-2 cursor-pointer"
             >
               <Plus className="w-4 h-4 text-[#02140D]" />
               <span>New CAD Project</span>
@@ -265,25 +265,25 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
         </div>
 
         {/* Search & Filter Toolbar */}
-        <div className="bg-[#0B1E17] border border-[rgba(16,185,129,0.2)] rounded-xl p-4 space-y-3.5 shadow-sm">
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+        <div className="bg-[#0B1E17] border border-[rgba(16,185,129,0.2)] rounded-xl p-3.5 sm:p-4 space-y-3 shadow-sm">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-12 gap-2.5 sm:gap-3">
             {/* Live Search Bar */}
-            <div className="md:col-span-6 relative">
+            <div className="sm:col-span-2 md:col-span-6 relative">
               <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#8CA89E]" />
               <input
                 id="project-search-input"
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search projects by name, type, or material (live update)..."
-                className="w-full pl-9 pr-9 py-2.5 bg-[#071510] border border-[rgba(16,185,129,0.25)] rounded-lg text-xs sm:text-sm font-mono text-[#F0FDF4] placeholder:text-[#4E6B60] focus:outline-none focus:border-[#00F5A0] transition-colors"
+                placeholder="Search projects by name, type, or material..."
+                className="w-full min-h-[42px] pl-9 pr-9 py-2.5 bg-[#071510] border border-[rgba(16,185,129,0.25)] rounded-lg text-xs sm:text-sm font-mono text-[#F0FDF4] placeholder:text-[#4E6B60] focus:outline-none focus:border-[#00F5A0] transition-colors"
               />
               {searchQuery && (
                 <button
                   id="btn-clear-search"
                   type="button"
                   onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8CA89E] hover:text-[#00F5A0] transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8CA89E] hover:text-[#00F5A0] p-1"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -291,13 +291,13 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
             </div>
 
             {/* Filter by Project Type */}
-            <div className="md:col-span-3">
+            <div className="sm:col-span-1 md:col-span-3">
               <div className="relative">
                 <select
                   id="filter-project-type"
                   value={selectedType}
                   onChange={(e) => setSelectedType(e.target.value)}
-                  className="w-full px-3 py-2.5 bg-[#071510] border border-[rgba(16,185,129,0.25)] rounded-lg text-xs font-mono text-[#F0FDF4] focus:outline-none focus:border-[#00F5A0] appearance-none cursor-pointer pr-8"
+                  className="w-full min-h-[42px] px-3 py-2.5 bg-[#071510] border border-[rgba(16,185,129,0.25)] rounded-lg text-xs font-mono text-[#F0FDF4] focus:outline-none focus:border-[#00F5A0] appearance-none cursor-pointer pr-8"
                 >
                   {availableTypes.map((t) => (
                     <option key={t.id} value={t.id} className="bg-[#071510] text-[#F0FDF4]">
@@ -310,13 +310,13 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
             </div>
 
             {/* Filter / Sort by Date or Name */}
-            <div className="md:col-span-3">
+            <div className="sm:col-span-1 md:col-span-3">
               <div className="relative">
                 <select
                   id="filter-sort-by"
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value as any)}
-                  className="w-full px-3 py-2.5 bg-[#071510] border border-[rgba(16,185,129,0.25)] rounded-lg text-xs font-mono text-[#F0FDF4] focus:outline-none focus:border-[#00F5A0] appearance-none cursor-pointer pr-8"
+                  className="w-full min-h-[42px] px-3 py-2.5 bg-[#071510] border border-[rgba(16,185,129,0.25)] rounded-lg text-xs font-mono text-[#F0FDF4] focus:outline-none focus:border-[#00F5A0] appearance-none cursor-pointer pr-8"
                 >
                   <option value="date_desc" className="bg-[#071510] text-[#F0FDF4]">
                     Sort: Recently Modified
@@ -337,9 +337,9 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
           </div>
 
           {/* Quick Date Filter Chips & Match Count */}
-          <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-[rgba(16,185,129,0.1)] text-xs font-mono">
-            <div className="flex items-center gap-2 overflow-x-auto py-0.5">
-              <span className="text-[#8CA89E] flex items-center gap-1 shrink-0">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 pt-2 border-t border-[rgba(16,185,129,0.1)] text-xs font-mono">
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 max-w-full">
+              <span className="text-[#8CA89E] flex items-center gap-1 shrink-0 text-[11px]">
                 <Calendar className="w-3.5 h-3.5 text-[#00F5A0]" />
                 <span>Modified:</span>
               </span>
@@ -353,7 +353,7 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
                   key={chip.id}
                   id={`filter-date-${chip.id}`}
                   onClick={() => setDateRangeFilter(chip.id as any)}
-                  className={`px-2.5 py-1 rounded-md text-[11px] font-mono transition-colors cursor-pointer shrink-0 ${
+                  className={`px-2.5 py-1.5 min-h-[32px] rounded-md text-[11px] font-mono transition-colors cursor-pointer shrink-0 ${
                     dateRangeFilter === chip.id
                       ? 'bg-[#00F5A0] text-[#02140D] font-bold shadow-xs'
                       : 'bg-[#071510] hover:bg-[#102B21] text-[#8CA89E] hover:text-[#F0FDF4] border border-[rgba(16,185,129,0.15)]'
@@ -398,7 +398,7 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3.5 sm:gap-4">
             {filteredProjects.map((record) => {
               const part = record.part;
               const isCurrent = currentPart && currentPart.id === record.id;
@@ -464,9 +464,9 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
                         e.stopPropagation();
                         onOpenProject(part);
                       }}
-                      className="px-2.5 py-1.5 rounded-lg bg-[#102B21] group-hover:bg-[#00F5A0] text-xs font-mono text-[#00F5A0] group-hover:text-[#02140D] font-bold transition-colors flex items-center gap-1.5 cursor-pointer"
+                      className="min-h-[38px] px-3 py-1.5 rounded-lg bg-[#102B21] group-hover:bg-[#00F5A0] text-xs font-mono text-[#00F5A0] group-hover:text-[#02140D] font-bold transition-colors flex items-center gap-1.5 cursor-pointer"
                     >
-                      <FolderOpen className="w-3.5 h-3.5 shrink-0" />
+                      <FolderOpen className="w-4 h-4 shrink-0" />
                       <span>Open in 3D</span>
                     </button>
 
@@ -475,16 +475,16 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
                         id={`btn-duplicate-proj-${record.id}`}
                         title="Duplicate Project"
                         onClick={(e) => handleDuplicate(record, e)}
-                        className="p-1.5 rounded-lg hover:bg-[#16382B] text-[#8CA89E] hover:text-[#F0FDF4] transition-colors cursor-pointer"
+                        className="min-w-[38px] min-h-[38px] flex items-center justify-center p-2 rounded-lg hover:bg-[#16382B] text-[#8CA89E] hover:text-[#F0FDF4] transition-colors cursor-pointer"
                       >
-                        <Copy className="w-3.5 h-3.5" />
+                        <Copy className="w-4 h-4" />
                       </button>
 
                       {deleteConfirmId === record.id ? (
                         <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                           <button
                             onClick={(e) => handleDelete(record.id, e)}
-                            className="px-1.5 py-1 rounded bg-red-500/20 border border-red-500/40 text-red-400 text-[10px] font-mono hover:bg-red-500 hover:text-white"
+                            className="min-h-[36px] px-2.5 py-1 rounded-lg bg-red-500/20 border border-red-500/40 text-red-400 text-xs font-mono font-bold hover:bg-red-500 hover:text-white transition-colors"
                           >
                             Confirm
                           </button>
@@ -493,9 +493,9 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
                               e.stopPropagation();
                               setDeleteConfirmId(null);
                             }}
-                            className="p-1 text-[#8CA89E] hover:text-white"
+                            className="min-w-[36px] min-h-[36px] flex items-center justify-center p-1.5 text-[#8CA89E] hover:text-white"
                           >
-                            <X className="w-3 h-3" />
+                            <X className="w-4 h-4" />
                           </button>
                         </div>
                       ) : (
@@ -506,9 +506,9 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
                             e.stopPropagation();
                             setDeleteConfirmId(record.id);
                           }}
-                          className="p-1.5 rounded-lg hover:bg-red-500/20 text-[#8CA89E] hover:text-red-400 transition-colors cursor-pointer"
+                          className="min-w-[38px] min-h-[38px] flex items-center justify-center p-2 rounded-lg hover:bg-red-500/20 text-[#8CA89E] hover:text-red-400 transition-colors cursor-pointer"
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       )}
                     </div>
@@ -521,4 +521,4 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
       </div>
     </div>
   );
-};
+});

@@ -39,4 +39,13 @@ export const TEST_SUITE: TestScenario[] = [
     expectedPartType: 'bracket',
     expectedFeatureCountMin: 2,
   },
+  {
+    id: 'test_5_converter',
+    title: 'Test 5: Vanta 2D-to-3D Technical Blueprint Conversion',
+    description: 'Reconstructs a stepped transmission drive shaft with keyway, bearing steps, and chamfers from an engineering blueprint.',
+    prompt:
+      'Convert 2D drawing: Stepped transmission drive shaft with total length 180 mm, main diameter 50 mm, step 1 diameter 35 mm, length 45 mm, DIN 6885 keyway 10 mm wide × 5 mm deep × 35 mm long, and 1.5 mm chamfers.',
+    expectedPartType: 'stepped_shaft',
+    expectedFeatureCountMin: 4,
+  },
 ];

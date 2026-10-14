@@ -93,17 +93,18 @@ export const UserAuthWidget: React.FC = () => {
   let userSubText: string;
 
   if (isGoogle) {
-    const rawName = profile?.displayName || user.displayName || 'Google User';
-    userLabelText = rawName.split(' ')[0] || rawName;
-    userSubText = profile?.email || user.email || 'Google Account';
+    const rawName = String(profile?.displayName || user?.displayName || 'Google User');
+    userLabelText = (rawName.split(' ')[0] || rawName).trim();
+    userSubText = profile?.email || user?.email || 'Google Account';
   } else if (isPhone) {
-    const phone = profile?.phoneNumber || user.phoneNumber;
+    const phone = profile?.phoneNumber || user?.phoneNumber;
     userLabelText = phone || 'My Account';
     userSubText = phone || 'Phone Verified';
   } else {
-    const rawName = profile?.displayName || user.displayName || user.email?.split('@')[0] || 'My Account';
-    userLabelText = rawName.split(' ')[0] || rawName;
-    userSubText = profile?.email || user.email || 'Authenticated';
+    const emailPrefix = user?.email ? String(user.email).split('@')[0] : '';
+    const rawName = String(profile?.displayName || user?.displayName || emailPrefix || 'My Account');
+    userLabelText = (rawName.split(' ')[0] || rawName).trim();
+    userSubText = profile?.email || user?.email || 'Authenticated';
   }
 
   const photoURL = isGoogle ? (profile?.photoURL || user.photoURL) : null;

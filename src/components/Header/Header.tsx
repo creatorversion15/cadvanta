@@ -7,6 +7,8 @@ import {
   triggerBlobDownload,
 } from '../../engine/stlExporter';
 import { exportToDXF } from '../../engine/advancedExporters';
+import { generateEngineeringSummaryReportPDF } from '../../engine/pdfReportGenerator';
+import { CadVantaLogo } from '../Brand/CadVantaLogo';
 import {
   Layers,
   Download,
@@ -37,7 +39,13 @@ import {
   Calculator,
   Cloud,
   ShieldCheck,
+  Keyboard,
+  Undo2,
+  Redo2,
+  PenTool,
+  PackagePlus,
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { useSubscription, SUBSCRIPTION_PRICE_INR } from '../../context/SubscriptionContext';
 import { useTheme } from '../../context/ThemeContext';
 import { UserAuthWidget } from './UserAuthWidget';
@@ -65,6 +73,16 @@ interface HeaderProps {
   onOpenPluginManagerModal?: () => void;
   onOpenCostEstimatorModal?: () => void;
   onOpenEngineeringChecksModal?: () => void;
+  onOpenShortcuts?: () => void;
+  onOpenSketcher?: () => void;
+  onOpenPartLibrary?: () => void;
+  onOpenImageStudio?: () => void;
+  onOpenDrawingConverter?: () => void;
+  onOpenEngineeringSummary?: () => void;
+  onUndo?: () => void;
+  onRedo?: () => void;
+  canUndo?: boolean;
+  canRedo?: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -90,6 +108,16 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenPluginManagerModal,
   onOpenCostEstimatorModal,
   onOpenEngineeringChecksModal,
+  onOpenShortcuts,
+  onOpenSketcher,
+  onOpenPartLibrary,
+  onOpenImageStudio,
+  onOpenDrawingConverter,
+  onOpenEngineeringSummary,
+  onUndo,
+  onRedo,
+  canUndo = false,
+  canRedo = false,
 }) => {
   const { isPro, openSubscriptionModal } = useSubscription();
   const { theme, isDark, toggleTheme } = useTheme();
@@ -140,1204 +168,676 @@ export const Header: React.FC<HeaderProps> = ({
 
     document.addEventListener('mousedown', handleClickOutside);
     document.addEventListener('keydown', handleKeyDown);
-    return () => {
+  
+  return () => {
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, []);
 
-  const presets: { type: PartType; label: string; desc: string; category: string; isPro?: boolean }[] = [
-    // IC Engines
-    { type: 'engine_cylinder_block', label: 'Inline-4 Cast Engine Cylinder Block', desc: 'Ø85mm bore with honed liners, water jackets & bearing saddles', category: 'Engines', isPro: true },
-    { type: 'engine_cylinder_head', label: 'DOHC 16-Valve Engine Cylinder Head', desc: 'Pent-roof chambers, 4 valves/cyl, dual cam arches & spark plug wells', category: 'Engines', isPro: true },
-    { type: 'engine_crankshaft', label: 'Multi-Throw Forged Crankshaft', desc: '4-Cyl heavy forged crank with counterweights & oil galleries', category: 'Engines', isPro: true },
-    { type: 'engine_piston', label: 'IC Engine Piston & Crown', desc: 'Ø85mm high-compression piston with 3-ring pack grooves & pin bosses', category: 'Engines' },
-    { type: 'engine_connecting_rod', label: 'Forged H-Beam Connecting Rod', desc: '140mm center-to-center with split cap & dual rod bolts', category: 'Engines' },
-    { type: 'engine_camshaft', label: 'DOHC Multi-Lobe Camshaft', desc: 'Intake & exhaust lobes with ground journals & timing flange', category: 'Engines' },
-    { type: 'engine_valve', label: 'Combustion Poppet Valve & Seat', desc: 'Ø34mm intake/exhaust valve with 45° ground seat & stem keeper grooves', category: 'Engines', isPro: true },
-    { type: 'engine_flywheel', label: 'Engine Flywheel & Ring Gear', desc: 'Ø280mm inertia wheel with starter ring gear teeth & clutch mount face', category: 'Engines' },
-
-    // Turbomachinery & Forced Induction
-    { type: 'gas_turbine_blisk', label: 'Aero Gas Turbine Rotor (Blisk)', desc: 'Ø260mm high-pressure turbine bladed disc with fir-tree roots', category: 'Turbomachinery', isPro: true },
-    { type: 'turbocharger_impeller', label: 'Turbocharger Compressor Impeller', desc: 'Billet 6+6 aerodynamic swept inducer/exducer blades', category: 'Turbomachinery', isPro: true },
-    { type: 'roots_supercharger_rotor', label: 'Twin-Lobe Supercharger Rotor', desc: '60° twisted helical roots blower rotor for forced induction', category: 'Turbomachinery', isPro: true },
-
-    // Powertrain & Gearboxes
-    { type: 'planetary_gearbox', label: '2-Stage Epicyclic Planetary Gearbox', desc: '16:1 speed reduction ratio for high torque transmission', category: 'Powertrain', isPro: true },
-    { type: 'clutch_pack', label: 'Multi-Plate Wet Clutch Assembly', desc: 'Slotted basket with 6 friction discs, inner splined hub & pressure plate', category: 'Powertrain', isPro: true },
-    { type: 'universal_joint', label: 'Universal Joint (Cardan Spider)', desc: 'Heavy-duty 4-way cross journal with needle bearing drive yokes', category: 'Powertrain', isPro: true },
-    { type: 'shaft', label: 'Stepped Transmission Shaft', desc: 'Ø30/Ø60×200mm with DIN 6885 parallel keyway', category: 'Powertrain' },
-    { type: 'flange_coupling', label: 'Rigid Flange Coupling', desc: '5 kW @ 1440 RPM, EN8 steel with clamp bolts', category: 'Powertrain' },
-    { type: 'gear', label: 'Involute Spur Gear', desc: 'Module 2.5, 24 teeth, 20° pressure angle', category: 'Powertrain' },
-
-    // Precision Robotics & Mechanisms
-    { type: 'cycloidal_drive', label: 'Precision Cycloidal Speed Reducer', desc: 'Zero-backlash robotic joint drive with eccentric cam & pin ring', category: 'Robotics', isPro: true },
-    { type: 'geneva_mechanism', label: 'Geneva Rotary Indexing Wheel', desc: '6-slot intermittent motion driver pin & star wheel', category: 'Robotics', isPro: true },
-
-    // Standard Machine Elements
-    { type: 'bearing', label: 'Deep Groove Ball Bearing', desc: 'ISO 6206 Ø30×Ø62×16mm with raceways & ball array', category: 'Elements' },
-    { type: 'bearing_housing', label: 'Pillow Block Bearing Housing', desc: 'Cast iron body with Ø52mm precision bearing seat', category: 'Elements' },
-    { type: 'spring', label: 'Helical Compression Spring', desc: 'Ø4mm wire, 8 active coils, ground ends', category: 'Elements' },
-    { type: 'bracket', label: 'L-Mounting Bracket', desc: 'Heavy duty 8mm thick angle with gusset stiffener', category: 'Elements' },
-    { type: 'flange', label: 'Bolted Pipe Flange', desc: 'Ø120mm with 6x bolt hole array on 90mm PCD', category: 'Elements' },
+  const presets = [
+    { type: 'shaft' as PartType, label: 'Stepped Shaft', desc: 'Rotational transmission', icon: Activity, isPro: false },
+    { type: 'flange' as PartType, label: 'Mounting Flange', desc: 'Pipe connector', icon: Compass, isPro: false },
+    { type: 'bracket' as PartType, label: 'L-Bracket', desc: 'Structural mount', icon: Layers, isPro: false },
+    { type: 'planetary_gearbox' as PartType, label: 'Planetary Gearbox', desc: 'Epicyclic train', icon: Boxes, isPro: true },
+    { type: 'gear' as PartType, label: 'Spur Gear', desc: 'Power transmission', icon: Activity, isPro: true },
+    { type: 'helical_gear' as PartType, label: 'Helical Gear', desc: 'Smooth engagement', icon: Activity, isPro: true }
   ];
 
-  const categories = ['All', 'Engines', 'Turbomachinery', 'Powertrain', 'Robotics', 'Elements'];
-
-  const filteredPresets = useMemo(() => {
-    return presets.filter((p) => {
-      const matchCat = selectedCategory === 'All' || p.category === selectedCategory;
-      const matchSearch =
-        presetSearch.trim() === '' ||
-        p.label.toLowerCase().includes(presetSearch.toLowerCase()) ||
-        p.desc.toLowerCase().includes(presetSearch.toLowerCase()) ||
-        p.category.toLowerCase().includes(presetSearch.toLowerCase());
-      return matchCat && matchSearch;
-    });
-  }, [presets, selectedCategory, presetSearch]);
-
-  const handleSelectPresetClick = (p: (typeof presets)[0]) => {
+  const handleSelectPresetClick = (p: any) => {
     if (p.isPro && !isPro) {
-      setShowPresetsMenu(false);
-      setIsMobileMenuOpen(false);
-      openSubscriptionModal(`Unlock ${p.label} (Hard Design Engine) for ₹${SUBSCRIPTION_PRICE_INR}`, p.type);
+      openSubscriptionModal();
       return;
     }
     onSelectPreset(p.type);
     setShowPresetsMenu(false);
-    setIsMobileMenuOpen(false);
-    setShowMobilePresetsPicker(false);
+  };
+
+  const handleExportSTEP = () => {
+    const jsonStr = exportToJSON(part);
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+    triggerBlobDownload(blob, `${part.name || 'cad_model'}_STEP.json`);
+    setShowStepNotification(true);
+    setTimeout(() => setShowStepNotification(false), 5000);
+    setShowExportMenu(false);
   };
 
   const handleExportSTL = () => {
-    const blob = exportToSTLBinary(part);
-    const filename = `${part.name.replace(/[^a-zA-Z0-9_-]/g, '_')}.stl`;
-    triggerBlobDownload(blob, filename);
+    window.dispatchEvent(new CustomEvent('export-stl-request'));
     setShowExportMenu(false);
   };
 
   const handleExportDXF = () => {
-    const blob = exportToDXF(part, { format: 'dxf', units: part.units || 'mm', resolution: 'standard' });
-    const filename = `${part.name.replace(/[^a-zA-Z0-9_-]/g, '_')}.dxf`;
-    triggerBlobDownload(blob, filename);
-    setShowExportMenu(false);
-  };
-
-  const handleExportOBJ = () => {
-    const blob = exportToOBJ(part);
-    const filename = `${part.name.replace(/[^a-zA-Z0-9_-]/g, '_')}.obj`;
-    triggerBlobDownload(blob, filename);
-    setShowExportMenu(false);
-  };
-
-  const handleExportJSON = () => {
-    const blob = exportToJSON(part);
-    const filename = `${part.name.replace(/[^a-zA-Z0-9_-]/g, '_')}.cad.json`;
-    triggerBlobDownload(blob, filename);
-    setShowExportMenu(false);
-  };
-
-  const handleExportSTEP = () => {
-    if (!isPro) {
-      setShowExportMenu(false);
-      openSubscriptionModal(`Unlock B-Rep STEP Solid & CAD Exporters for ₹${SUBSCRIPTION_PRICE_INR}`);
-      return;
-    }
-    setShowStepNotification(true);
-    setTimeout(() => setShowStepNotification(false), 4500);
+    const blob = exportToDXF(part, { format: 'dxf', units: part.units === 'inch' ? 'inch' : 'mm', resolution: 'standard' });
+    triggerBlobDownload(blob, `${part.name || 'cad_model'}_2D.dxf`);
     setShowExportMenu(false);
   };
 
   return (
-    <header className="relative z-40 h-14 w-full bg-[#071510]/95 backdrop-blur-md border-b border-[rgba(16,185,129,0.2)] px-2 sm:px-4 lg:px-6 flex items-center justify-between gap-2 sm:gap-3 lg:gap-4 shrink-0 shadow-lg text-[#F0FDF4]">
+    <motion.header 
+      initial={{ opacity: 0, y: -20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: 'easeOut' }}
+      className="relative z-40 h-[60px] w-full bg-[#07130F]/95 backdrop-blur-md border-b border-[rgba(16,185,129,0.15)] px-4 sm:px-6 flex items-center justify-between gap-4 shrink-0 shadow-sm text-[#F0FDF4] overflow-visible"
+    >
       {/* ========================================================================= */}
-      {/* LEFT SECTION: CADVANTA logo + 3D CAD badge + Founder: Viraj Bansod      */}
+      {/* LEFT SECTION: Logo + Founder + Design Library + Current Design            */}
       {/* ========================================================================= */}
-      <div className="flex items-center gap-2 sm:gap-2.5 lg:gap-3 shrink-0 min-w-0">
+      <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
         {/* Logo & Brand Name */}
         <button
           onClick={onGoHome}
-          className="flex items-center gap-2 group text-left hover:opacity-95 transition-opacity shrink-0 cursor-pointer"
-          title="CADVANTA Mechanical 3D CAD"
+          className="flex items-center gap-1.5 group hover:opacity-95 transition-opacity shrink-0 cursor-pointer"
+          title="CADVANTA | AI for Better Mechanical Designs"
         >
-          <div className="w-8 h-8 bg-[#0B1E17] text-[#00F5A0] rounded-lg flex items-center justify-center shadow-md font-black font-mono text-sm border border-[#00F5A0]/30 group-hover:border-[#00F5A0] transition-colors shrink-0">
-            <Boxes className="w-4 h-4 text-[#00F5A0] group-hover:scale-110 transition-transform" />
-          </div>
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            <span className="font-extrabold text-base sm:text-lg tracking-tight text-[#F0FDF4] font-mono whitespace-nowrap">
-              CAD<span className="text-[#00F5A0]">VANTA</span>
-            </span>
-            <span className="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded bg-[#102B21] text-[#00F5A0] font-bold border border-[#00F5A0]/30 hidden xs:inline-block sm:inline-block whitespace-nowrap">
-              3D CAD
-            </span>
-          </div>
+          <CadVantaLogo variant="wordmark" size="md" />
+          <span className="text-[10px] font-sans uppercase px-1.5 py-0.5 rounded-sm bg-[#102B21] text-[#00F5A0] font-semibold border border-[#00F5A0]/20 hidden 2xl:inline-block whitespace-nowrap ml-1">
+            3D CAD
+          </span>
         </button>
 
-        <div className="h-5 w-[1px] bg-[rgba(16,185,129,0.18)] mx-0.5 sm:mx-1 hidden lg:block" />
+        <div className="h-5 w-[1px] bg-[rgba(16,185,129,0.15)] hidden lg:block shrink-0" />
 
-        {/* Founder Badge (Viraj Bansod) - Full on XL+, Compact on LG */}
+        {/* Founder Badge */}
         <button
-          id="btn-header-maker-profile"
           onClick={onOpenMakerModal}
-          className="hidden xl:flex items-center gap-2 px-2.5 py-1 rounded-full bg-[#0B1E17] hover:bg-[#102B21] hover:border-[#00F5A0]/40 border border-[rgba(16,185,129,0.2)] text-xs font-mono text-[#8CA89E] hover:text-[#F0FDF4] transition-all group shrink-0 whitespace-nowrap cursor-pointer"
+          className="hidden xl:flex items-center gap-1.5 text-xs font-sans text-[#8CA89E] hover:text-[#00F5A0] transition-colors shrink-0 whitespace-nowrap cursor-pointer"
           title="Founder & Lead Architect: Viraj Bansod"
         >
-          <div className="w-4 h-4 rounded-full bg-[#102B21] border border-[#00F5A0]/40 text-[#00F5A0] flex items-center justify-center font-bold text-[9px] font-mono shrink-0">
-            VB
-          </div>
           <span className="text-[11px] whitespace-nowrap">
-            Founder: <strong className="font-bold text-[#F0FDF4] group-hover:text-[#00F5A0] transition-colors">Viraj Bansod</strong>
+            Founder: <strong className="font-medium text-[#F0FDF4] transition-colors">Viraj Bansod</strong>
           </span>
         </button>
 
-        <button
-          onClick={onOpenMakerModal}
-          className="hidden lg:flex xl:hidden items-center gap-1.5 px-2 py-1 rounded-full bg-[#0B1E17] hover:bg-[#102B21] hover:border-[#00F5A0]/40 border border-[rgba(16,185,129,0.2)] text-xs font-mono text-[#8CA89E] hover:text-[#F0FDF4] transition-all group shrink-0 whitespace-nowrap cursor-pointer"
-          title="Founder & Lead Architect: Viraj Bansod"
-        >
-          <div className="w-4 h-4 rounded-full bg-[#102B21] border border-[#00F5A0]/40 text-[#00F5A0] flex items-center justify-center font-bold text-[9px] font-mono shrink-0">
-            VB
-          </div>
-          <span className="text-[11px] font-bold text-[#F0FDF4] group-hover:text-[#00F5A0] transition-colors whitespace-nowrap">
-            Viraj Bansod
-          </span>
-        </button>
-      </div>
+        <div className="h-5 w-[1px] bg-[rgba(16,185,129,0.15)] hidden xl:block shrink-0" />
 
-      {/* ========================================================================= */}
-      {/* CENTER SECTION: Design Library + Current Design / selector + Get Pro      */}
-      {/* ========================================================================= */}
-      <div className="hidden md:flex items-center justify-center gap-1.5 lg:gap-2.5 xl:gap-3 min-w-0 flex-1 max-w-2xl mx-1 sm:mx-2">
-        {/* 0.5 Projects Dashboard Button */}
-        {onOpenDashboard && (
-          <button
-            id="btn-header-projects"
-            onClick={onOpenDashboard}
-            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-mono transition-all shrink-0 whitespace-nowrap cursor-pointer ${
-              isDashboard
-                ? 'bg-[#00F5A0] text-[#02140D] font-bold shadow-[0_0_12px_rgba(0,245,160,0.3)]'
-                : 'bg-[#0B1E17] hover:bg-[#102B21] border border-[rgba(16,185,129,0.25)] hover:border-[#00F5A0]/50 text-[#8CA89E] hover:text-[#F0FDF4]'
-            }`}
-            title="Open Projects & Dashboard (Search & Filter)"
-          >
-            <FolderOpen className={`w-3.5 h-3.5 shrink-0 ${isDashboard ? 'text-[#02140D]' : 'text-[#00F5A0]'}`} />
-            <span className="whitespace-nowrap">PROJECTS</span>
-          </button>
-        )}
-
-        {/* 1. Design Library Button */}
+        {/* Design Library */}
         {onOpenDesignLibrary && (
           <button
-            id="btn-header-design-library"
             onClick={onOpenDesignLibrary}
-            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-gradient-to-r from-[#102B21] to-[#07130F] hover:from-[#153A2C] hover:to-[#0B1E17] border border-[#00F5A0]/40 hover:border-[#00F5A0] rounded-lg text-xs font-mono text-[#00F5A0] hover:text-[#F0FDF4] transition-all shadow-[0_0_12px_rgba(0,245,160,0.12)] font-bold group shrink-0 whitespace-nowrap cursor-pointer"
-            title="Open Full 60+ Mechanical Design Library & Marketplace"
+            className="hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-transparent hover:bg-[#0B1E17] border border-transparent hover:border-[rgba(16,185,129,0.15)] rounded-md text-[13px] font-sans font-medium text-[#8CA89E] hover:text-[#F0FDF4] transition-colors shrink-0 cursor-pointer"
+            title="Open Design Library"
           >
-            <Layers className="w-3.5 h-3.5 text-[#00F5A0] group-hover:scale-110 transition-transform shrink-0" />
+            <Layers className="w-4 h-4 shrink-0" />
             <span className="whitespace-nowrap">DESIGN LIBRARY</span>
-            <span className="px-1.5 py-0.2 rounded bg-[#00F5A0]/20 text-[#00F5A0] text-[9px] border border-[#00F5A0]/30 font-mono shrink-0">
-              60+
-            </span>
+            <ChevronDown className="w-3 h-3 opacity-70 shrink-0" />
           </button>
         )}
 
-        {/* 2. Current Design / File Selector (Controlled width with ellipsis + Chevron ▾) */}
+        {/* Current Design */}
         {!isHome && (
-          <div className="relative shrink-0 min-w-0" ref={presetsDropdownRef}>
+          <div className="relative shrink min-w-0 flex items-center" ref={presetsDropdownRef}>
             <button
-              id="btn-presets-dropdown"
               onClick={() => {
                 setShowPresetsMenu(!showPresetsMenu);
                 setShowExportMenu(false);
               }}
-              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-[#0B1E17] hover:bg-[#102B21] hover:border-[#00F5A0]/50 border border-[rgba(16,185,129,0.25)] rounded-lg text-xs font-mono text-[#F0FDF4] transition-all whitespace-nowrap shadow-xs group cursor-pointer"
-              title={`Current Design: ${part.name} (Click to change component)`}
+              className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 bg-transparent hover:bg-[#0B1E17] border border-transparent hover:border-[rgba(16,185,129,0.15)] rounded-md text-xs sm:text-[13px] font-sans font-medium text-[#F0FDF4] transition-colors cursor-pointer max-w-[100px] xs:max-w-[140px] sm:max-w-[200px] md:max-w-xs min-w-0"
+              title={`Current Design: ${part.name}`}
             >
-              <Compass className="w-3.5 h-3.5 text-[#00F5A0] shrink-0" />
-              {/* Controlled max-width with ellipsis ensures long names never crowd neighboring buttons */}
-              <span className="font-bold max-w-[110px] md:max-w-[130px] lg:max-w-[160px] xl:max-w-[200px] 2xl:max-w-[250px] truncate block text-left">
+              <Compass className="w-4 h-4 text-[#00F5A0] shrink-0 hidden sm:block" />
+              <span className="truncate block text-left">
                 {part.name}
               </span>
               <ChevronDown
-                className={`w-3.5 h-3.5 text-[#8CA89E] group-hover:text-[#00F5A0] transition-transform shrink-0 ${
+                className={`w-3.5 h-3.5 text-[#8CA89E] transition-transform duration-200 shrink-0 ${
                   showPresetsMenu ? 'rotate-180 text-[#00F5A0]' : ''
                 }`}
               />
             </button>
 
             {/* Presets Selection Dropdown Menu */}
-            {showPresetsMenu && (
-              <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 w-80 sm:w-96 max-w-[calc(100vw-32px)] bg-[#071510] border border-[rgba(16,185,129,0.3)] rounded-xl shadow-2xl p-2.5 z-50 animate-in fade-in slide-in-from-top-1 text-[#F0FDF4] max-h-[80vh] flex flex-col">
-                <div className="flex items-center justify-between pb-2 border-b border-[rgba(16,185,129,0.15)]">
-                  <div className="text-[11px] uppercase font-mono tracking-widest text-[#00F5A0] font-bold flex items-center gap-1.5">
-                    <Boxes className="w-3.5 h-3.5" />
-                    <span>Mechanical CAD Library ({presets.length})</span>
-                  </div>
-                  <span className="text-[9px] font-mono text-[#8CA89E]">Instant 3D Generator</span>
-                </div>
-
-                {/* Quick Search */}
-                <div className="relative mt-2">
-                  <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-[#8CA89E]" />
-                  <input
-                    id="input-preset-search"
-                    type="text"
-                    placeholder="Search IC engines, turbomachinery, gearboxes..."
-                    value={presetSearch}
-                    onChange={(e) => setPresetSearch(e.target.value)}
-                    className="w-full pl-8 pr-3 py-1.5 bg-[#0B1E17] border border-[rgba(16,185,129,0.2)] rounded-lg text-xs font-mono text-[#F0FDF4] placeholder:text-[#4E6B60] focus:outline-none focus:border-[#00F5A0]"
-                  />
-                </div>
-
-                {/* Category Pills */}
-                <div className="flex items-center gap-1 overflow-x-auto py-2 no-scrollbar border-b border-[rgba(16,185,129,0.1)]">
-                  {categories.map((cat) => (
-                    <button
-                      key={cat}
-                      onClick={() => setSelectedCategory(cat)}
-                      className={`px-2 py-0.5 rounded text-[10px] font-mono whitespace-nowrap transition-all cursor-pointer ${
-                        selectedCategory === cat
-                          ? 'bg-[#00F5A0] text-[#02140D] font-bold shadow-xs'
-                          : 'bg-[#0B1E17] text-[#8CA89E] hover:bg-[#102B21] hover:text-[#F0FDF4] border border-[rgba(16,185,129,0.15)]'
-                      }`}
-                    >
-                      {cat}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Scrollable Presets List */}
-                <div className="overflow-y-auto max-h-[48vh] space-y-1 mt-1 pr-1">
-                  {filteredPresets.length === 0 ? (
-                    <div className="py-6 text-center text-xs text-[#8CA89E] font-mono">
-                      No mechanical components match "{presetSearch}"
+            <AnimatePresence>
+              {showPresetsMenu && (
+                <motion.div
+                  initial={{ opacity: 0, y: -5, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -5, scale: 0.95 }}
+                  transition={{ duration: 0.2 }}
+                  className="absolute left-0 top-full mt-2 w-80 sm:w-96 max-w-[calc(100vw-32px)] bg-[#07130F] border border-[rgba(16,185,129,0.3)] rounded-xl shadow-2xl p-2.5 z-50 text-[#F0FDF4] max-h-[80vh] flex flex-col"
+                >
+                  <div className="flex items-center justify-between pb-2 border-b border-[rgba(16,185,129,0.15)]">
+                    <div className="text-[11px] uppercase font-sans tracking-widest text-[#00F5A0] font-semibold flex items-center gap-1.5">
+                      <Boxes className="w-3.5 h-3.5" />
+                      Engineering Library
                     </div>
-                  ) : (
-                    filteredPresets.map((p) => (
+                  </div>
+                  <div className="overflow-y-auto flex-1 mt-2 pr-1 space-y-1.5" style={{ scrollbarWidth: 'thin', scrollbarColor: '#102B21 transparent' }}>
+                    {presets.map((p) => (
                       <button
                         key={p.type}
-                        id={`preset-option-${p.type}`}
                         onClick={() => handleSelectPresetClick(p)}
-                        className={`w-full text-left p-2 rounded-lg text-xs transition-colors flex flex-col group cursor-pointer ${
-                          part.part_type === p.type
-                            ? 'bg-[#00F5A0] text-[#02140D] font-bold shadow-sm'
-                            : 'text-[#8CA89E] hover:bg-[#102B21] hover:text-[#F0FDF4]'
+                        className={`w-full flex items-start gap-3 p-2 rounded-lg border transition-all text-left group cursor-pointer ${
+                          part.type === p.type
+                            ? 'bg-[#102B21] border-[#00F5A0]/40'
+                            : 'bg-transparent border-transparent hover:bg-[#0B1E17] hover:border-[rgba(16,185,129,0.2)]'
                         }`}
                       >
-                        <div className="flex items-center justify-between gap-1">
-                          <div className="flex items-center gap-1.5 min-w-0">
-                            {part.part_type === p.type && (
-                              <Check className="w-3.5 h-3.5 text-[#02140D] shrink-0" />
-                            )}
-                            <span className="font-mono font-medium truncate">{p.label}</span>
-                          </div>
-                          <div className="flex items-center gap-1 shrink-0">
-                            <span
-                              className={`text-[8px] font-mono uppercase px-1.5 py-0.5 rounded ${
-                                part.part_type === p.type
-                                  ? 'bg-[#02140D]/15 text-[#02140D]'
-                                  : 'bg-[#0B1E17] text-[#8CA89E]'
-                              }`}
-                            >
-                              {p.category}
-                            </span>
-                            {p.isPro && (
-                              <span
-                                className={`text-[9px] px-1.5 py-0.2 rounded font-mono font-bold flex items-center gap-0.5 ${
-                                  part.part_type === p.type
-                                    ? 'bg-[#02140D] text-[#00F5A0]'
-                                    : isPro
-                                    ? 'bg-[#102B21] text-[#00F5A0] border border-[#00F5A0]/30'
-                                    : 'bg-[#1C2521] text-[#F59E0B] border border-[#F59E0B]/30'
-                                }`}
-                              >
-                                {isPro ? <Unlock className="w-2.5 h-2.5" /> : <Lock className="w-2.5 h-2.5" />}
-                                <span>PRO</span>
-                              </span>
-                            )}
-                          </div>
+                        <div className={`mt-0.5 w-6 h-6 rounded flex items-center justify-center shrink-0 ${part.type === p.type ? 'bg-[#00F5A0]/10 text-[#00F5A0]' : 'bg-[#0B1E17] text-[#8CA89E] group-hover:text-[#F0FDF4]'}`}>
+                          <p.icon className="w-3.5 h-3.5" />
                         </div>
-                        <span
-                          className={`text-[10px] font-sans mt-0.5 line-clamp-1 ${
-                            part.part_type === p.type
-                              ? 'text-[#02140D]/80'
-                              : 'text-[#4E6B60] group-hover:text-[#8CA89E]'
-                          }`}
-                        >
-                          {p.desc}
-                        </span>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className={`text-[13px] font-sans font-medium truncate ${part.type === p.type ? 'text-[#00F5A0]' : 'text-[#F0FDF4]'}`}>
+                              {p.label}
+                            </div>
+                            {p.isPro && !isPro && (
+                              <Lock className="w-3 h-3 text-[#F59E0B] shrink-0" />
+                            )}
+                          </div>
+                          <div className="text-[11px] text-[#8CA89E] font-sans mt-0.5 line-clamp-1">{p.desc}</div>
+                        </div>
                       </button>
-                    ))
-                  )}
-                </div>
-              </div>
-            )}
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         )}
 
-        {/* 3. Get Pro Button (Separate button, prominent, never covers design selector) */}
+        {/* Quick CAD Operations Toolbar: Undo, Redo, 2D Sketch, Part Library */}
+        {!isHome && (
+          <div className="hidden lg:flex items-center gap-1 pl-2 border-l border-[rgba(16,185,129,0.2)]">
+            {onUndo && (
+              <button
+                id="btn-header-undo"
+                onClick={onUndo}
+                disabled={!canUndo}
+                title="Undo (Ctrl+Z)"
+                className={`p-1.5 rounded transition-colors cursor-pointer ${
+                  canUndo
+                    ? 'text-[#8CA89E] hover:text-[#00F5A0] hover:bg-[#0B1E17]'
+                    : 'text-[#8CA89E]/30 cursor-not-allowed'
+                }`}
+              >
+                <Undo2 className="w-4 h-4" />
+              </button>
+            )}
+
+            {onRedo && (
+              <button
+                id="btn-header-redo"
+                onClick={onRedo}
+                disabled={!canRedo}
+                title="Redo (Ctrl+Y)"
+                className={`p-1.5 rounded transition-colors cursor-pointer ${
+                  canRedo
+                    ? 'text-[#8CA89E] hover:text-[#00F5A0] hover:bg-[#0B1E17]'
+                    : 'text-[#8CA89E]/30 cursor-not-allowed'
+                }`}
+              >
+                <Redo2 className="w-4 h-4" />
+              </button>
+            )}
+
+            {onOpenSketcher && (
+              <button
+                id="btn-header-sketch"
+                onClick={onOpenSketcher}
+                title="Open 2D Parametric Sketcher Workspace"
+                className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-[#8CA89E] hover:text-[#00F5A0] hover:bg-[#0B1E17] rounded border border-transparent hover:border-[rgba(16,185,129,0.2)] transition-colors cursor-pointer"
+              >
+                <PenTool className="w-3.5 h-3.5 text-[#00F5A0]" />
+                <span className="hidden xl:inline">2D Sketch</span>
+              </button>
+            )}
+
+            {onOpenPartLibrary && (
+              <button
+                id="btn-header-part-library"
+                onClick={onOpenPartLibrary}
+                title="Insert Standard Hardware (Bearings, Fasteners, Gears, Motors)"
+                className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-[#8CA89E] hover:text-[#00F5A0] hover:bg-[#0B1E17] rounded border border-transparent hover:border-[rgba(16,185,129,0.2)] transition-colors cursor-pointer"
+              >
+                <PackagePlus className="w-3.5 h-3.5 text-[#00F5A0]" />
+                <span className="hidden xl:inline">Part Library</span>
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* ========================================================================= */}
+      {/* RIGHT SECTION: Get Pro + 2D Drawing + Export + Theme + Avatar           */}
+      {/* ========================================================================= */}
+      <div className="flex items-center justify-end gap-1.5 sm:gap-3 shrink-0">
+        
+        {/* Get Pro Button */}
         <button
-          id="btn-header-pro-subscription"
           onClick={() => openSubscriptionModal()}
-          className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all shadow-xs border shrink-0 whitespace-nowrap cursor-pointer ${
+          className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[13px] font-sans font-semibold transition-colors shrink-0 whitespace-nowrap cursor-pointer ${
             isPro
-              ? 'bg-[#102B21] border-[#00F5A0]/50 text-[#00F5A0] hover:bg-[#00F5A0] hover:text-[#02140D]'
-              : 'bg-gradient-to-r from-[#102B21] to-[#0B1E17] border-[#F59E0B]/50 hover:border-[#00F5A0] text-[#F59E0B] hover:text-[#00F5A0]'
+              ? 'bg-[#102B21] text-[#00F5A0] hover:bg-[#00F5A0] hover:text-[#02140D]'
+              : 'bg-transparent text-[#F59E0B] hover:text-[#00F5A0] border border-[#F59E0B]/30 hover:border-[#00F5A0]/50'
           }`}
-          title={isPro ? 'CADVANTA PRO is active' : 'Upgrade to CADVANTA PRO for ₹1.69'}
+          title={isPro ? 'CADVANTA PRO is active' : 'Upgrade to CADVANTA PRO'}
         >
           {isPro ? (
             <>
-              <Crown className="w-3.5 h-3.5 text-[#00F5A0] fill-current shrink-0" />
+              <Crown className="w-3.5 h-3.5 fill-current shrink-0" />
               <span>PRO ACTIVE</span>
             </>
           ) : (
             <>
-              <Sparkles className="w-3.5 h-3.5 text-[#F59E0B] animate-pulse shrink-0" />
+              <Sparkles className="w-3.5 h-3.5 animate-pulse shrink-0" />
               <span>GET PRO</span>
-              <span className="text-[10px] opacity-85 hidden xl:inline">(₹1.69)</span>
             </>
           )}
         </button>
-      </div>
 
-      {/* ========================================================================= */}
-      {/* RIGHT SECTION: Sign In + 2D Drawing + Export                             */}
-      {/* ========================================================================= */}
-      <div className="flex items-center justify-end gap-1.5 sm:gap-2 lg:gap-2.5 shrink-0">
-        {/* 1. Sign In (or UserAuthWidget when signed in) - MUST ALWAYS REMAIN COMPLETELY VISIBLE */}
-        <div className="shrink-0">
-          <UserAuthWidget />
-        </div>
-
-        {/* 1.5 Theme Toggle Button (Light/Dark mode) */}
-        <button
-          id="btn-theme-toggle"
-          type="button"
-          onClick={toggleTheme}
-          className="flex items-center justify-center w-8 h-8 rounded-lg bg-[#0B1E17] hover:bg-[#102B21] border border-[rgba(16,185,129,0.25)] hover:border-[#00F5A0]/50 text-[#8CA89E] hover:text-[#00F5A0] transition-all cursor-pointer shrink-0 shadow-xs"
-          title={isDark ? 'Switch to Clean Light Theme' : 'Switch to Dark Theme (Obsidian Emerald)'}
-          aria-label="Toggle Theme"
-        >
-          {isDark ? (
-            <Sun className="w-4 h-4 text-[#F59E0B] hover:text-[#FBBF24] transition-colors" />
-          ) : (
-            <Moon className="w-4 h-4 text-[#00B377] transition-colors" />
-          )}
-        </button>
-
-        {/* 2. 2D Drawing Button */}
+        {/* 2D Drawing */}
         {!isHome && (
           <button
-            id="btn-open-drawing-modal"
             onClick={onOpenDrawingModal}
-            className="hidden lg:flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-[#0B1E17] hover:bg-[#102B21] border border-[rgba(16,185,129,0.2)] hover:border-[#00F5A0]/40 text-[#8CA89E] hover:text-[#F0FDF4] rounded-lg text-xs font-mono transition-colors shrink-0 whitespace-nowrap cursor-pointer"
+            className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 bg-transparent hover:bg-[#0B1E17] border border-transparent hover:border-[rgba(16,185,129,0.15)] text-[13px] font-sans font-medium text-[#F0FDF4] rounded-md transition-colors shrink-0 whitespace-nowrap cursor-pointer"
             title="Generate Engineering Technical Drawing (SVG/DXF)"
           >
-            <FileText className="w-3.5 h-3.5 text-[#00F5A0] shrink-0" />
+            <FileText className="w-4 h-4 text-[#8CA89E] shrink-0" />
             <span>2D Drawing</span>
           </button>
         )}
 
-        {/* 2.5 Engineering Tools Dropdown */}
+        {/* AI Image Studio Button */}
+        {onOpenImageStudio && (
+          <button
+            id="btn-header-image-studio"
+            onClick={onOpenImageStudio}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#092016] hover:bg-[#102B21] border border-[#00F5A0]/40 hover:border-[#00F5A0]/70 text-[13px] font-sans font-medium text-[#00F5A0] hover:text-[#15FFAE] rounded-md transition-all shrink-0 whitespace-nowrap cursor-pointer shadow-[0_0_12px_rgba(0,245,160,0.15)]"
+            title="AI Image Studio - Create & Edit Images with gemini-3.1-flash-image-preview"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-[#00F5A0] shrink-0" />
+            <span>Image Studio</span>
+            <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-[#00F5A0]/20 text-[#00F5A0] hidden xl:inline uppercase font-bold">
+              AI
+            </span>
+          </button>
+        )}
+
+        {/* Vanta 2D-to-3D Converter Button */}
+        {onOpenDrawingConverter && (
+          <button
+            id="btn-header-drawing-converter"
+            onClick={onOpenDrawingConverter}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#071510] hover:bg-[#102B21] border border-[#00F5A0]/50 hover:border-[#00F5A0] text-[13px] font-sans font-medium text-[#00F5A0] rounded-md transition-all shrink-0 whitespace-nowrap cursor-pointer shadow-[0_0_12px_rgba(0,245,160,0.15)]"
+            title="Vanta 2D-to-3D Converter - Convert engineering drawings into 3D CAD models"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-[#00F5A0] shrink-0" />
+            <span>2D → 3D</span>
+            <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-[#00F5A0]/20 text-[#00F5A0] hidden xl:inline uppercase font-bold">
+              CAD
+            </span>
+          </button>
+        )}
+
+        {/* Export Dropdown */}
         {!isHome && (
-          <div className="relative shrink-0" ref={toolsDropdownRef}>
+          <div className="relative shrink-0" ref={exportDropdownRef}>
             <button
-              id="btn-tools-dropdown"
               onClick={() => {
-                setShowToolsMenu(!showToolsMenu);
-                setShowExportMenu(false);
+                setShowExportMenu(!showExportMenu);
                 setShowPresetsMenu(false);
+                setShowToolsMenu(false);
               }}
-              className="hidden sm:flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-[#0B1E17] hover:bg-[#102B21] border border-[rgba(16,185,129,0.2)] hover:border-[#00F5A0]/40 text-[#8CA89E] hover:text-[#F0FDF4] rounded-lg text-xs font-mono transition-colors shrink-0 whitespace-nowrap cursor-pointer"
-              title="CAD & Simulation Engineering Tools"
+              className="hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-transparent hover:bg-[#0B1E17] border border-transparent hover:border-[rgba(16,185,129,0.15)] text-[13px] font-sans font-medium text-[#F0FDF4] rounded-md transition-colors shrink-0 whitespace-nowrap cursor-pointer"
             >
-              <Wrench className="w-3.5 h-3.5 text-[#00F5A0] shrink-0" />
-              <span>Tools</span>
-              <ChevronDown
-                className={`w-3 h-3 text-[#8CA89E] transition-transform ${
-                  showToolsMenu ? 'rotate-180' : ''
-                }`}
-              />
+              <Download className="w-4 h-4 text-[#8CA89E] shrink-0" />
+              <span>EXPORT</span>
+              <ChevronDown className={`w-3 h-3 text-[#8CA89E] transition-transform duration-200 shrink-0 ${showExportMenu ? 'rotate-180' : ''}`} />
             </button>
 
-            {showToolsMenu && (
-              <div className="absolute right-0 top-full mt-2 w-64 bg-[#071510] border border-[rgba(16,185,129,0.28)] rounded-xl shadow-2xl p-1.5 z-50 space-y-1 animate-in fade-in slide-in-from-top-1 text-[#F0FDF4]">
-                <div className="px-2.5 py-1 text-[10px] uppercase font-mono tracking-widest text-[#8CA89E] font-bold border-b border-[rgba(16,185,129,0.12)] pb-1">
-                  Parametric Design Tools
+            <AnimatePresence>
+              {showExportMenu && (
+                <motion.div
+                  initial={{ opacity: 0, y: -5, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -5, scale: 0.95 }}
+                  transition={{ duration: 0.2 }}
+                  className="absolute right-0 top-full mt-2 w-56 bg-[#07130F] border border-[rgba(16,185,129,0.3)] rounded-xl shadow-2xl p-1.5 z-50 space-y-1 text-[#F0FDF4]"
+                >
+                  <div className="px-2.5 py-1 text-[10px] uppercase font-sans tracking-widest text-[#8CA89E] font-semibold border-b border-[rgba(16,185,129,0.12)] pb-1 mb-1">
+                    CAD Formats
+                  </div>
+                  
+                  <button
+                    onClick={handleExportSTEP}
+                    className="w-full flex items-center justify-between p-2 rounded-lg bg-transparent hover:bg-[#0B1E17] transition-colors text-left group cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-6 h-6 rounded flex items-center justify-center bg-[#0B1E17] text-[#8CA89E] group-hover:text-[#00F5A0] group-hover:bg-[#102B21]">
+                        <Boxes className="w-3.5 h-3.5" />
+                      </div>
+                      <div>
+                        <div className="text-[13px] font-sans font-medium text-[#F0FDF4]">STEP Solid</div>
+                        <div className="text-[10px] font-sans text-[#8CA89E]">NURBS & B-Rep</div>
+                      </div>
+                    </div>
+                    {!isPro && <Lock className="w-3 h-3 text-[#F59E0B]" />}
+                  </button>
+
+                  <button
+                    onClick={handleExportSTL}
+                    className="w-full flex items-center justify-between p-2 rounded-lg bg-transparent hover:bg-[#0B1E17] transition-colors text-left group cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-6 h-6 rounded flex items-center justify-center bg-[#0B1E17] text-[#8CA89E] group-hover:text-[#00F5A0] group-hover:bg-[#102B21]">
+                        <Layers className="w-3.5 h-3.5" />
+                      </div>
+                      <div>
+                        <div className="text-[13px] font-sans font-medium text-[#F0FDF4]">STL Mesh</div>
+                        <div className="text-[10px] font-sans text-[#8CA89E]">For 3D Printing</div>
+                      </div>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={handleExportDXF}
+                    className="w-full flex items-center justify-between p-2 rounded-lg bg-transparent hover:bg-[#0B1E17] transition-colors text-left group cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-6 h-6 rounded flex items-center justify-center bg-[#0B1E17] text-[#8CA89E] group-hover:text-[#00F5A0] group-hover:bg-[#102B21]">
+                        <FileText className="w-3.5 h-3.5" />
+                      </div>
+                      <div>
+                        <div className="text-[13px] font-sans font-medium text-[#F0FDF4]">DXF 2D</div>
+                        <div className="text-[10px] font-sans text-[#8CA89E]">Laser & Waterjet</div>
+                      </div>
+                    </div>
+                  </button>
+
+                  <div className="border-t border-[rgba(16,185,129,0.12)] my-1" />
+
+                  <button
+                    onClick={() => {
+                      setShowExportMenu(false);
+                      if (onOpenEngineeringSummary) {
+                        onOpenEngineeringSummary();
+                      } else {
+                        generateEngineeringSummaryReportPDF(part, { downloadImmediately: true });
+                      }
+                    }}
+                    className="w-full flex items-center justify-between p-2 rounded-lg bg-[#00F5A0]/10 hover:bg-[#00F5A0]/20 border border-[#00F5A0]/30 transition-colors text-left group cursor-pointer"
+                    title="Export formal 3-page ISO 9001 / ASME engineering summary dossier"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-6 h-6 rounded flex items-center justify-center bg-[#00F5A0]/20 text-[#00F5A0] group-hover:bg-[#00F5A0] group-hover:text-[#030A07]">
+                        <FileText className="w-3.5 h-3.5" />
+                      </div>
+                      <div>
+                        <div className="text-[13px] font-sans font-bold text-[#00F5A0]">Engineering Dossier</div>
+                        <div className="text-[10px] font-sans text-[#8CA89E]">Costs, FEA & DFM PDF</div>
+                      </div>
+                    </div>
+                    <span className="text-[9px] font-mono bg-[#00F5A0] text-[#030A07] px-1.5 py-0.5 rounded font-bold">PDF</span>
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
+
+        <div className="w-[1px] h-5 bg-[rgba(16,185,129,0.2)] mx-1 hidden sm:block shrink-0" />
+
+        {/* User Auth Widget */}
+        <div className="shrink-0 flex items-center">
+          <UserAuthWidget />
+        </div>
+
+        {/* Mobile Menu Toggle */}
+        <button
+          className="flex md:hidden items-center justify-center min-w-[40px] min-h-[40px] rounded-xl bg-[#0B1E17] hover:bg-[#102B21] border border-[rgba(16,185,129,0.2)] text-[#00F5A0] shrink-0 transition-colors cursor-pointer"
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
+        >
+          {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+        </button>
+
+      </div>
+
+      {/* ========================================================================= */}
+      {/* MOBILE FULL-SCREEN MENU DRAWER                                            */}
+      {/* ========================================================================= */}
+      <AnimatePresence>
+        {isMobileMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.2 }}
+            className="fixed top-[60px] left-0 right-0 bottom-0 bg-[#07130F]/98 backdrop-blur-xl border-b border-[rgba(16,185,129,0.2)] shadow-2xl z-50 overflow-y-auto pb-24"
+          >
+            <div className="flex flex-col p-4 gap-3 max-w-lg mx-auto">
+              {/* Pro Status Banner */}
+              <button
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  openSubscriptionModal();
+                }}
+                className="w-full flex items-center justify-between p-3.5 bg-gradient-to-r from-[#102B21] to-[#0B1E17] border border-[#00F5A0]/30 rounded-xl text-left cursor-pointer shadow-md"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-[#00F5A0]/20 flex items-center justify-center text-[#00F5A0]">
+                    <Crown className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-mono font-bold text-[#F0FDF4] uppercase tracking-wider">
+                      {isPro ? 'CADVANTA PRO ACTIVE' : 'UPGRADE TO CADVANTA PRO'}
+                    </div>
+                    <div className="text-[11px] font-mono text-[#8CA89E]">
+                      {isPro ? 'All hard engineering engines unlocked' : `₹${SUBSCRIPTION_PRICE_INR} one-time lifetime access`}
+                    </div>
+                  </div>
                 </div>
+                <Sparkles className="w-4 h-4 text-[#00F5A0] shrink-0" />
+              </button>
+
+              {/* Engineering Tools Section */}
+              <div className="space-y-1.5 pt-1">
+                <div className="text-[10px] font-mono font-bold text-[#8CA89E] uppercase tracking-wider px-1">
+                  Engineering Tools & Solvers
+                </div>
+                
+                {/* AI Image Studio */}
+                {onOpenImageStudio && (
+                  <button
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      onOpenImageStudio();
+                    }}
+                    className="w-full min-h-[44px] flex items-center gap-3 px-3 py-2.5 bg-[#092016] hover:bg-[#102B21] border border-[#00F5A0]/40 rounded-xl text-xs font-mono text-[#00F5A0] transition-colors cursor-pointer"
+                  >
+                    <Sparkles className="w-4 h-4 text-[#00F5A0] shrink-0" />
+                    <span className="font-bold flex-1 text-left">AI Image Studio (Create & Edit)</span>
+                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#00F5A0]/20 text-[#00F5A0] font-bold">
+                      gemini-3.1
+                    </span>
+                  </button>
+                )}
+
+                {/* 2D to 3D Converter */}
+                {onOpenDrawingConverter && (
+                  <button
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      onOpenDrawingConverter();
+                    }}
+                    className="w-full min-h-[44px] flex items-center gap-3 px-3 py-2.5 bg-[#092016] hover:bg-[#102B21] border border-[#00F5A0]/50 rounded-xl text-xs font-mono text-[#00F5A0] transition-colors cursor-pointer"
+                  >
+                    <Sparkles className="w-4 h-4 text-[#00F5A0] shrink-0" />
+                    <span className="font-bold flex-1 text-left">2D to 3D CAD Converter</span>
+                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#00F5A0]/20 text-[#00F5A0] font-bold">
+                      B-Rep
+                    </span>
+                  </button>
+                )}
+
+                {onOpenDesignLibrary && (
+                  <button
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      onOpenDesignLibrary();
+                    }}
+                    className="w-full min-h-[44px] flex items-center gap-3 px-3 py-2.5 bg-[#0B1E17] hover:bg-[#102B21] border border-[rgba(16,185,129,0.15)] rounded-xl text-xs font-mono text-[#F0FDF4] transition-colors cursor-pointer"
+                  >
+                    <Layers className="w-4 h-4 text-[#00F5A0] shrink-0" />
+                    <span className="font-bold flex-1 text-left">Design Library & Catalog</span>
+                  </button>
+                )}
+
+                {!isHome && onOpenDrawingModal && (
+                  <button
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      onOpenDrawingModal();
+                    }}
+                    className="w-full min-h-[44px] flex items-center gap-3 px-3 py-2.5 bg-[#0B1E17] hover:bg-[#102B21] border border-[rgba(16,185,129,0.15)] rounded-xl text-xs font-mono text-[#F0FDF4] transition-colors cursor-pointer"
+                  >
+                    <FileText className="w-4 h-4 text-[#00F5A0] shrink-0" />
+                    <span className="font-bold flex-1 text-left">2D Engineering Drawings (ISO)</span>
+                  </button>
+                )}
 
                 {onOpenAssemblyModal && (
                   <button
                     onClick={() => {
+                      setIsMobileMenuOpen(false);
                       onOpenAssemblyModal();
-                      setShowToolsMenu(false);
                     }}
-                    className="w-full text-left p-2 rounded-lg text-xs font-mono text-[#8CA89E] hover:bg-[#102B21] hover:text-[#00F5A0] flex items-center justify-between transition-colors cursor-pointer group"
+                    className="w-full min-h-[44px] flex items-center gap-3 px-3 py-2.5 bg-[#0B1E17] hover:bg-[#102B21] border border-[rgba(16,185,129,0.15)] rounded-xl text-xs font-mono text-[#F0FDF4] transition-colors cursor-pointer"
                   >
-                    <div className="flex items-center gap-2">
-                      <Boxes className="w-3.5 h-3.5 text-[#00F5A0]" />
-                      <span>Assembly & Mates</span>
-                    </div>
-                    <span className="text-[10px] text-[#4E6B60] group-hover:text-[#8CA89E]">Multi-Part</span>
-                  </button>
-                )}
-
-                {onOpenSheetMetalModal && (
-                  <button
-                    onClick={() => {
-                      onOpenSheetMetalModal();
-                      setShowToolsMenu(false);
-                    }}
-                    className="w-full text-left p-2 rounded-lg text-xs font-mono text-[#8CA89E] hover:bg-[#102B21] hover:text-[#00F5A0] flex items-center justify-between transition-colors cursor-pointer group"
-                  >
-                    <div className="flex items-center gap-2">
-                      <Layers className="w-3.5 h-3.5 text-[#00F5A0]" />
-                      <span>Sheet Metal & Flanges</span>
-                    </div>
-                    <span className="text-[10px] text-[#4E6B60] group-hover:text-[#8CA89E]">K-Factor</span>
-                  </button>
-                )}
-
-                {onOpenSurfacingModal && (
-                  <button
-                    onClick={() => {
-                      onOpenSurfacingModal();
-                      setShowToolsMenu(false);
-                    }}
-                    className="w-full text-left p-2 rounded-lg text-xs font-mono text-[#8CA89E] hover:bg-[#102B21] hover:text-[#00F5A0] flex items-center justify-between transition-colors cursor-pointer group"
-                  >
-                    <div className="flex items-center gap-2">
-                      <Compass className="w-3.5 h-3.5 text-[#00F5A0]" />
-                      <span>Surfacing (Loft / Sweep)</span>
-                    </div>
-                    <span className="text-[10px] text-[#4E6B60] group-hover:text-[#8CA89E]">Non-Solid</span>
+                    <Boxes className="w-4 h-4 text-[#00F5A0] shrink-0" />
+                    <span className="font-bold flex-1 text-left">Multi-Body Assembly & Mates</span>
                   </button>
                 )}
 
                 {onOpenFEAModal && (
                   <button
                     onClick={() => {
+                      setIsMobileMenuOpen(false);
                       onOpenFEAModal();
-                      setShowToolsMenu(false);
                     }}
-                    className="w-full text-left p-2 rounded-lg text-xs font-mono text-[#8CA89E] hover:bg-[#102B21] hover:text-[#00F5A0] flex items-center justify-between transition-colors cursor-pointer group"
+                    className="w-full min-h-[44px] flex items-center gap-3 px-3 py-2.5 bg-[#0B1E17] hover:bg-[#102B21] border border-[rgba(16,185,129,0.15)] rounded-xl text-xs font-mono text-[#F0FDF4] transition-colors cursor-pointer"
                   >
-                    <div className="flex items-center gap-2">
-                      <Activity className="w-3.5 h-3.5 text-[#00F5A0]" />
-                      <span>FEA Stress Simulation</span>
-                    </div>
-                    <span className="text-[10px] text-[#4E6B60] group-hover:text-[#8CA89E]">Von Mises</span>
+                    <Activity className="w-4 h-4 text-[#38BDF8] shrink-0" />
+                    <span className="font-bold flex-1 text-left">FEA Von Mises Stress Analysis</span>
                   </button>
                 )}
 
                 {onOpenCostEstimatorModal && (
                   <button
-                    id="btn-menu-cost-estimator"
                     onClick={() => {
+                      setIsMobileMenuOpen(false);
                       onOpenCostEstimatorModal();
-                      setShowToolsMenu(false);
                     }}
-                    className="w-full text-left p-2 rounded-lg text-xs font-mono text-[#8CA89E] hover:bg-[#102B21] hover:text-[#00F5A0] flex items-center justify-between transition-colors cursor-pointer group"
+                    className="w-full min-h-[44px] flex items-center gap-3 px-3 py-2.5 bg-[#0B1E17] hover:bg-[#102B21] border border-[rgba(16,185,129,0.15)] rounded-xl text-xs font-mono text-[#F0FDF4] transition-colors cursor-pointer"
                   >
-                    <div className="flex items-center gap-2">
-                      <Calculator className="w-3.5 h-3.5 text-[#00F5A0]" />
-                      <span>Material & Cost Estimator</span>
-                    </div>
-                    <span className="text-[10px] text-[#4E6B60] group-hover:text-[#8CA89E]">Rollup</span>
+                    <Calculator className="w-4 h-4 text-[#00F5A0] shrink-0" />
+                    <span className="font-bold flex-1 text-left">BOM & Manufacturing Cost Estimator</span>
                   </button>
                 )}
 
-                {onOpenEngineeringChecksModal && (
-                  <button
-                    id="btn-menu-engineering-checks"
-                    onClick={() => {
-                      onOpenEngineeringChecksModal();
-                      setShowToolsMenu(false);
-                    }}
-                    className="w-full text-left p-2 rounded-lg text-xs font-mono text-[#8CA89E] hover:bg-[#102B21] hover:text-[#00F5A0] flex items-center justify-between transition-colors cursor-pointer group"
-                  >
-                    <div className="flex items-center gap-2">
-                      <ShieldCheck className="w-3.5 h-3.5 text-[#00F5A0]" />
-                      <span>Engineering Checks & DFM</span>
-                    </div>
-                    <span className="text-[10px] text-[#4E6B60] group-hover:text-[#8CA89E]">ISO / PDF</span>
-                  </button>
-                )}
-
-                <div className="h-[1px] bg-[rgba(16,185,129,0.12)] my-1" />
-
-                {onOpenCollaborationModal && (
+                {onOpenViraBot && (
                   <button
                     onClick={() => {
-                      onOpenCollaborationModal();
-                      setShowToolsMenu(false);
+                      setIsMobileMenuOpen(false);
+                      onOpenViraBot();
                     }}
-                    className="w-full text-left p-2 rounded-lg text-xs font-mono text-[#8CA89E] hover:bg-[#102B21] hover:text-[#00F5A0] flex items-center justify-between transition-colors cursor-pointer group"
+                    className="w-full min-h-[44px] flex items-center gap-3 px-3 py-2.5 bg-[#0B1E17] hover:bg-[#102B21] border border-[rgba(16,185,129,0.15)] rounded-xl text-xs font-mono text-[#F0FDF4] transition-colors cursor-pointer"
                   >
-                    <div className="flex items-center gap-2">
-                      <Share2 className="w-3.5 h-3.5 text-[#00F5A0]" />
-                      <span>Collaborate & History</span>
-                    </div>
-                    <span className="text-[10px] text-[#4E6B60] group-hover:text-[#8CA89E]">3D Notes</span>
-                  </button>
-                )}
-
-                {onOpenIntegrationsModal && (
-                  <button
-                    onClick={() => {
-                      onOpenIntegrationsModal();
-                      setShowToolsMenu(false);
-                    }}
-                    className="w-full text-left p-2 rounded-lg text-xs font-mono text-[#8CA89E] hover:bg-[#102B21] hover:text-[#00F5A0] flex items-center justify-between transition-colors cursor-pointer group"
-                  >
-                    <div className="flex items-center gap-2">
-                      <Cloud className="w-3.5 h-3.5 text-[#00F5A0]" />
-                      <span>Cloud & CAD Integrations</span>
-                    </div>
-                    <span className="text-[10px] text-[#4E6B60] group-hover:text-[#00F5A0] font-bold">7 Clouds / SW</span>
-                  </button>
-                )}
-
-                {onOpenGenerativeDesignModal && (
-                  <button
-                    onClick={() => {
-                      onOpenGenerativeDesignModal();
-                      setShowToolsMenu(false);
-                    }}
-                    className="w-full text-left p-2 rounded-lg text-xs font-mono text-[#8CA89E] hover:bg-[#102B21] hover:text-[#00F5A0] flex items-center justify-between transition-colors cursor-pointer group"
-                  >
-                    <div className="flex items-center gap-2">
-                      <Network className="w-3.5 h-3.5 text-[#00F5A0]" />
-                      <span>Generative Design</span>
-                    </div>
-                    <span className="text-[10px] text-[#4E6B60] group-hover:text-[#8CA89E]">Topology</span>
-                  </button>
-                )}
-
-                {onOpenPluginManagerModal && (
-                  <button
-                    onClick={() => {
-                      onOpenPluginManagerModal();
-                      setShowToolsMenu(false);
-                    }}
-                    className="w-full text-left p-2 rounded-lg text-xs font-mono text-[#8CA89E] hover:bg-[#102B21] hover:text-[#00F5A0] flex items-center justify-between transition-colors cursor-pointer group"
-                  >
-                    <div className="flex items-center gap-2">
-                      <Puzzle className="w-3.5 h-3.5 text-[#00F5A0]" />
-                      <span>Plugin Extensions</span>
-                    </div>
-                    <span className="text-[10px] text-[#4E6B60] group-hover:text-[#8CA89E]">SDK</span>
+                    <Bot className="w-4 h-4 text-[#00F5A0] shrink-0" />
+                    <span className="font-bold flex-1 text-left">VIRA AI Mechanical Assistant</span>
                   </button>
                 )}
               </div>
-            )}
-          </div>
-        )}
 
-        {/* 2.7 Share Project Button */}
-        {!isHome && onOpenCollaborationModal && (
-          <button
-            id="btn-header-share"
-            onClick={onOpenCollaborationModal}
-            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-[#0B1E17] hover:bg-[#102B21] border border-[rgba(16,185,129,0.3)] hover:border-[#00F5A0] text-[#00F5A0] hover:text-[#34EEA9] rounded-lg text-xs font-mono transition-all shrink-0 whitespace-nowrap cursor-pointer shadow-[0_0_10px_rgba(0,245,160,0.1)]"
-            title="Generate Shareable Link (View-Only or Reviewer)"
-          >
-            <Share2 className="w-3.5 h-3.5 stroke-[2] shrink-0" />
-            <span>Share</span>
-          </button>
-        )}
-
-        {/* 3. Export Button & Dropdown */}
-        {!isHome && (
-          <div className="relative shrink-0" ref={exportDropdownRef}>
-            <button
-              id="btn-export-dropdown"
-              onClick={() => {
-                if (onOpenExportModal) {
-                  onOpenExportModal();
-                } else {
-                  setShowExportMenu(!showExportMenu);
-                }
-                setShowPresetsMenu(false);
-                setShowToolsMenu(false);
-              }}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-[#00F5A0] hover:bg-[#34EEA9] text-[#02140D] font-bold rounded-lg text-xs font-mono uppercase tracking-wider transition-all shadow-[0_0_14px_rgba(0,245,160,0.25)] active:scale-95 shrink-0 whitespace-nowrap cursor-pointer"
-              title="Export 3D Model (STEP, IGES, STL, DXF)"
-            >
-              <Download className="w-3.5 h-3.5 stroke-[2.5] shrink-0" />
-              <span>Export</span>
-              <ChevronDown
-                className={`w-3 h-3 stroke-[2.5] shrink-0 transition-transform ${
-                  showExportMenu ? 'rotate-180' : ''
-                }`}
-              />
-            </button>
-
-            {showExportMenu && (
-              <div className="absolute right-0 top-full mt-2 w-56 bg-[#071510] border border-[rgba(16,185,129,0.28)] rounded-xl shadow-2xl p-1.5 z-50 space-y-1 animate-in fade-in slide-in-from-top-1 text-[#F0FDF4]">
-                <div className="px-2.5 py-1 text-[10px] uppercase font-mono tracking-widest text-[#8CA89E] font-bold border-b border-[rgba(16,185,129,0.12)] pb-1">
-                  CAD & CAM Formats
+              {/* Exports Section */}
+              {!isHome && (
+                <div className="space-y-1.5 pt-2 border-t border-[rgba(16,185,129,0.15)]">
+                  <div className="text-[10px] font-mono font-bold text-[#8CA89E] uppercase tracking-wider px-1">
+                    CAD Exports
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <button
+                      onClick={() => {
+                        setIsMobileMenuOpen(false);
+                        handleExportSTEP();
+                      }}
+                      className="min-h-[44px] flex flex-col items-center justify-center p-2 bg-[#0B1E17] hover:bg-[#102B21] border border-[rgba(16,185,129,0.15)] rounded-xl text-center cursor-pointer"
+                    >
+                      <Boxes className="w-4 h-4 text-[#00F5A0] mb-1" />
+                      <span className="text-[11px] font-mono font-bold text-[#F0FDF4]">STEP</span>
+                      <span className="text-[9px] font-mono text-[#8CA89E]">Solid</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setIsMobileMenuOpen(false);
+                        handleExportSTL();
+                      }}
+                      className="min-h-[44px] flex flex-col items-center justify-center p-2 bg-[#0B1E17] hover:bg-[#102B21] border border-[rgba(16,185,129,0.15)] rounded-xl text-center cursor-pointer"
+                    >
+                      <Layers className="w-4 h-4 text-[#00F5A0] mb-1" />
+                      <span className="text-[11px] font-mono font-bold text-[#F0FDF4]">STL</span>
+                      <span className="text-[9px] font-mono text-[#8CA89E]">3D Print</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setIsMobileMenuOpen(false);
+                        handleExportDXF();
+                      }}
+                      className="min-h-[44px] flex flex-col items-center justify-center p-2 bg-[#0B1E17] hover:bg-[#102B21] border border-[rgba(16,185,129,0.15)] rounded-xl text-center cursor-pointer"
+                    >
+                      <FileText className="w-4 h-4 text-[#00F5A0] mb-1" />
+                      <span className="text-[11px] font-mono font-bold text-[#F0FDF4]">DXF</span>
+                      <span className="text-[9px] font-mono text-[#8CA89E]">2D CNC</span>
+                    </button>
+                  </div>
                 </div>
+              )}
 
-                {onOpenExportModal && (
-                  <button
-                    onClick={() => {
-                      onOpenExportModal();
-                      setShowExportMenu(false);
-                    }}
-                    className="w-full text-left p-2 rounded-lg text-xs font-mono font-bold text-[#00F5A0] bg-[#102B21] hover:bg-[#16382B] flex items-center justify-between transition-colors group cursor-pointer border border-[#00F5A0]/20"
-                  >
-                    <div className="flex items-center gap-2">
-                      <Download className="w-3.5 h-3.5 text-[#00F5A0]" />
-                      <span>Unified Export Panel</span>
-                    </div>
-                    <span className="text-[10px] text-[#34EEA9]">All</span>
-                  </button>
-                )}
-
+              {/* Platform Details & Maker */}
+              <div className="pt-2 border-t border-[rgba(16,185,129,0.15)] flex items-center justify-between text-xs font-mono text-[#8CA89E]">
                 <button
-                  id="export-stl-btn"
-                  onClick={handleExportSTL}
-                  className="w-full text-left p-2 rounded-lg text-xs font-mono text-[#8CA89E] hover:bg-[#102B21] hover:text-[#00F5A0] flex items-center justify-between transition-colors group cursor-pointer"
-                >
-                  <div className="flex items-center gap-2">
-                    <Download className="w-3.5 h-3.5 text-[#00F5A0]" />
-                    <span>STL (3D Print)</span>
-                  </div>
-                  <span className="text-[10px] text-[#4E6B60] group-hover:text-[#8CA89E]">.stl</span>
-                </button>
-
-                <button
-                  id="export-dxf-btn"
-                  onClick={handleExportDXF}
-                  className="w-full text-left p-2 rounded-lg text-xs font-mono text-[#8CA89E] hover:bg-[#102B21] hover:text-[#00F5A0] flex items-center justify-between transition-colors group cursor-pointer"
-                >
-                  <div className="flex items-center gap-2">
-                    <Download className="w-3.5 h-3.5 text-[#00F5A0]" />
-                    <span>DXF (AutoCAD / CNC)</span>
-                  </div>
-                  <span className="text-[10px] text-[#4E6B60] group-hover:text-[#8CA89E]">.dxf</span>
-                </button>
-
-                <button
-                  id="export-obj-btn"
-                  onClick={handleExportOBJ}
-                  className="w-full text-left p-2 rounded-lg text-xs font-mono text-[#8CA89E] hover:bg-[#102B21] hover:text-[#00F5A0] flex items-center justify-between transition-colors group cursor-pointer"
-                >
-                  <div className="flex items-center gap-2">
-                    <Boxes className="w-3.5 h-3.5 text-[#00F5A0]" />
-                    <span>OBJ (Mesh)</span>
-                  </div>
-                  <span className="text-[10px] text-[#4E6B60] group-hover:text-[#8CA89E]">.obj</span>
-                </button>
-
-                <button
-                  id="export-json-btn"
-                  onClick={handleExportJSON}
-                  className="w-full text-left p-2 rounded-lg text-xs font-mono text-[#8CA89E] hover:bg-[#102B21] hover:text-[#00F5A0] flex items-center justify-between transition-colors group cursor-pointer"
-                >
-                  <div className="flex items-center gap-2">
-                    <FileCode className="w-3.5 h-3.5 text-[#00F5A0]" />
-                    <span>CAD JSON</span>
-                  </div>
-                  <span className="text-[10px] text-[#4E6B60] group-hover:text-[#8CA89E]">.json</span>
-                </button>
-
-                <div className="h-[1px] bg-[rgba(16,185,129,0.12)] my-1" />
-
-                <button
-                  id="export-drawing-btn"
                   onClick={() => {
-                    onOpenDrawingModal();
-                    setShowExportMenu(false);
+                    setIsMobileMenuOpen(false);
+                    onOpenMakerModal();
                   }}
-                  className="w-full text-left p-2 rounded-lg text-xs font-mono text-[#8CA89E] hover:bg-[#102B21] hover:text-[#00F5A0] flex items-center justify-between transition-colors group cursor-pointer"
+                  className="flex items-center gap-1.5 text-[#8CA89E] hover:text-[#00F5A0] transition-colors p-1 cursor-pointer"
                 >
-                  <div className="flex items-center gap-2">
-                    <FileText className="w-3.5 h-3.5 text-[#00F5A0]" />
-                    <span>Technical Drawing</span>
-                  </div>
-                  <span className="text-[10px] text-[#4E6B60] group-hover:text-[#8CA89E]">.svg</span>
+                  <UserCheck className="w-4 h-4 text-[#00F5A0]" />
+                  <span>Founder: <strong>Viraj Bansod</strong></span>
                 </button>
 
-                <button
-                  id="export-step-btn"
-                  onClick={handleExportSTEP}
-                  className="w-full text-left p-2 rounded-lg text-xs font-mono text-[#8CA89E] hover:bg-[#102B21] hover:text-[#00F5A0] flex items-center justify-between transition-colors group cursor-pointer"
-                >
-                  <div className="flex items-center gap-2">
-                    <Layers className="w-3.5 h-3.5 text-[#00F5A0]" />
-                    <span>STEP Solid</span>
-                  </div>
-                  <span className="text-[10px] px-1 bg-[#102B21] text-[#00F5A0] border border-[#00F5A0]/30 font-bold rounded">
-                    PRO
-                  </span>
-                </button>
+                {onOpenShortcuts && (
+                  <button
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      onOpenShortcuts();
+                    }}
+                    className="flex items-center gap-1 text-[#8CA89E] hover:text-[#00F5A0] transition-colors p-1 cursor-pointer"
+                  >
+                    <Keyboard className="w-4 h-4" />
+                    <span>Shortcuts</span>
+                  </button>
+                )}
               </div>
-            )}
-          </div>
-        )}
-
-        {/* ========================================================================= */}
-        {/* MOBILE MENU TOGGLE: Only visible on smaller viewports (< md: 768px)       */}
-        {/* ========================================================================= */}
-        <button
-          id="btn-mobile-menu-toggle"
-          onClick={() => {
-            setIsMobileMenuOpen(!isMobileMenuOpen);
-            setShowPresetsMenu(false);
-            setShowExportMenu(false);
-          }}
-          className={`md:hidden flex items-center justify-center w-8 h-8 rounded-lg border transition-all cursor-pointer shrink-0 ${
-            isMobileMenuOpen
-              ? 'bg-[#00F5A0] text-[#02140D] border-[#00F5A0] shadow-[0_0_12px_rgba(0,245,160,0.3)]'
-              : 'bg-[#0B1E17] text-[#8CA89E] hover:text-[#00F5A0] border-[rgba(16,185,129,0.25)] hover:border-[#00F5A0]/50'
-          }`}
-          title="Toggle Navigation Menu"
-          aria-label="Navigation Menu"
-        >
-          {isMobileMenuOpen ? <X className="w-4 h-4 stroke-[2.5]" /> : <Menu className="w-4 h-4" />}
-        </button>
-      </div>
-
-      {/* ========================================================================= */}
-      {/* MOBILE NAVIGATION DRAWER: Clean, non-overlapping menu for small screens   */}
-      {/* ========================================================================= */}
-      {isMobileMenuOpen && (
-        <div
-          ref={mobileMenuRef}
-          className="md:hidden absolute top-full left-0 right-0 w-full bg-[#071510]/98 border-b border-[rgba(16,185,129,0.3)] shadow-2xl p-3 z-50 backdrop-blur-xl animate-in fade-in slide-in-from-top-2 max-h-[calc(100vh-60px)] overflow-y-auto space-y-2.5"
-        >
-          {/* Current Design Quick Switcher in Mobile Drawer */}
-          {!isHome && (
-            <div className="p-3 rounded-xl bg-[#0B1E17] border border-[rgba(16,185,129,0.2)] space-y-2">
-              <div className="flex items-center justify-between text-[11px] font-mono text-[#8CA89E]">
-                <span className="flex items-center gap-1.5 text-[#00F5A0] font-bold uppercase tracking-wider">
-                  <Compass className="w-3.5 h-3.5" />
-                  <span>Current Design</span>
-                </span>
-                <button
-                  onClick={() => setShowMobilePresetsPicker(!showMobilePresetsPicker)}
-                  className="text-[#00F5A0] hover:underline font-bold text-[11px] cursor-pointer"
-                >
-                  {showMobilePresetsPicker ? 'Hide Picker ▲' : 'Change Component ▾'}
-                </button>
-              </div>
-              <div className="text-sm font-mono font-bold text-[#F0FDF4] truncate">
-                {part.name}
-              </div>
-
-              {/* Mobile Embedded Presets Picker */}
-              {showMobilePresetsPicker && (
-                <div className="pt-2 border-t border-[rgba(16,185,129,0.15)] space-y-2">
-                  <div className="relative">
-                    <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-[#8CA89E]" />
-                    <input
-                      type="text"
-                      placeholder="Search CAD components..."
-                      value={presetSearch}
-                      onChange={(e) => setPresetSearch(e.target.value)}
-                      className="w-full pl-8 pr-3 py-1.5 bg-[#071510] border border-[rgba(16,185,129,0.25)] rounded-lg text-xs font-mono text-[#F0FDF4] placeholder:text-[#4E6B60] focus:outline-none focus:border-[#00F5A0]"
-                    />
-                  </div>
-
-                  <div className="flex items-center gap-1 overflow-x-auto py-1 no-scrollbar">
-                    {categories.map((cat) => (
-                      <button
-                        key={cat}
-                        onClick={() => setSelectedCategory(cat)}
-                        className={`px-2 py-0.5 rounded text-[10px] font-mono whitespace-nowrap ${
-                          selectedCategory === cat
-                            ? 'bg-[#00F5A0] text-[#02140D] font-bold'
-                            : 'bg-[#071510] text-[#8CA89E] border border-[rgba(16,185,129,0.15)]'
-                        }`}
-                      >
-                        {cat}
-                      </button>
-                    ))}
-                  </div>
-
-                  <div className="max-h-44 overflow-y-auto space-y-1 pr-1">
-                    {filteredPresets.map((p) => (
-                      <button
-                        key={p.type}
-                        onClick={() => handleSelectPresetClick(p)}
-                        className={`w-full text-left p-2 rounded-lg text-xs font-mono flex items-center justify-between ${
-                          part.part_type === p.type
-                            ? 'bg-[#00F5A0] text-[#02140D] font-bold'
-                            : 'bg-[#071510] text-[#8CA89E] hover:text-[#F0FDF4]'
-                        }`}
-                      >
-                        <span className="truncate">{p.label}</span>
-                        {p.isPro && (
-                          <span className="text-[9px] px-1 bg-[#102B21] text-[#00F5A0] border border-[#00F5A0]/30 rounded ml-1 shrink-0">
-                            PRO
-                          </span>
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
-          )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-          {/* Secondary Action Grid */}
-          <div className="grid grid-cols-2 gap-2">
-            {/* Design Library */}
-            {onOpenDesignLibrary && (
-              <button
-                onClick={() => {
-                  setIsMobileMenuOpen(false);
-                  onOpenDesignLibrary();
-                }}
-                className="flex items-center gap-2 p-2.5 rounded-xl bg-[#0B1E17] hover:bg-[#102B21] border border-[#00F5A0]/30 hover:border-[#00F5A0] text-xs font-mono font-bold text-[#00F5A0] transition-all cursor-pointer"
-              >
-                <Layers className="w-4 h-4 text-[#00F5A0] shrink-0" />
-                <div className="text-left min-w-0">
-                  <div className="truncate">Design Library</div>
-                  <div className="text-[10px] text-[#8CA89E] font-normal">60+ Models</div>
-                </div>
-              </button>
-            )}
-
-            {/* Get Pro Subscription */}
-            <button
-              onClick={() => {
-                setIsMobileMenuOpen(false);
-                openSubscriptionModal();
-              }}
-              className={`flex items-center gap-2 p-2.5 rounded-xl border text-xs font-mono font-bold transition-all cursor-pointer ${
-                isPro
-                  ? 'bg-[#102B21] border-[#00F5A0]/50 text-[#00F5A0]'
-                  : 'bg-gradient-to-r from-[#102B21] to-[#0B1E17] border-[#F59E0B]/50 text-[#F59E0B]'
-              }`}
-            >
-              {isPro ? (
-                <Crown className="w-4 h-4 text-[#00F5A0] shrink-0 fill-current" />
-              ) : (
-                <Sparkles className="w-4 h-4 text-[#F59E0B] shrink-0 animate-pulse" />
-              )}
-              <div className="text-left min-w-0">
-                <div className="truncate">{isPro ? 'PRO Active' : 'Get PRO'}</div>
-                <div className="text-[10px] text-[#8CA89E] font-normal">
-                  {isPro ? 'All Features' : '₹1.69 / Lifetime'}
-                </div>
-              </div>
-            </button>
-
-            {/* 2D Drawing */}
-            {!isHome && (
-              <button
-                onClick={() => {
-                  setIsMobileMenuOpen(false);
-                  onOpenDrawingModal();
-                }}
-                className="flex items-center gap-2 p-2.5 rounded-xl bg-[#0B1E17] hover:bg-[#102B21] border border-[rgba(16,185,129,0.2)] text-xs font-mono text-[#F0FDF4] transition-all cursor-pointer"
-              >
-                <FileText className="w-4 h-4 text-[#00F5A0] shrink-0" />
-                <div className="text-left min-w-0">
-                  <div className="truncate">2D Drawing</div>
-                  <div className="text-[10px] text-[#8CA89E] font-normal">Technical Prints</div>
-                </div>
-              </button>
-            )}
-
-            {/* Unified Export Panel */}
-            {onOpenExportModal && (
-              <button
-                onClick={() => {
-                  setIsMobileMenuOpen(false);
-                  onOpenExportModal();
-                }}
-                className="flex items-center gap-2 p-2.5 rounded-xl bg-[#102B21] hover:bg-[#16382B] border border-[#00F5A0]/40 text-xs font-mono text-[#00F5A0] transition-all cursor-pointer font-bold"
-              >
-                <Download className="w-4 h-4 text-[#00F5A0] shrink-0" />
-                <div className="text-left min-w-0">
-                  <div className="truncate">Export Panel</div>
-                  <div className="text-[10px] text-[#8CA89E] font-normal">STEP, IGES, STL, DXF</div>
-                </div>
-              </button>
-            )}
-
-            {/* Assembly Modeling */}
-            {onOpenAssemblyModal && (
-              <button
-                onClick={() => {
-                  setIsMobileMenuOpen(false);
-                  onOpenAssemblyModal();
-                }}
-                className="flex items-center gap-2 p-2.5 rounded-xl bg-[#0B1E17] hover:bg-[#102B21] border border-[rgba(16,185,129,0.2)] text-xs font-mono text-[#F0FDF4] transition-all cursor-pointer"
-              >
-                <Boxes className="w-4 h-4 text-[#00F5A0] shrink-0" />
-                <div className="text-left min-w-0">
-                  <div className="truncate">Assembly</div>
-                  <div className="text-[10px] text-[#8CA89E] font-normal">Mates & Exploded</div>
-                </div>
-              </button>
-            )}
-
-            {/* Sheet Metal */}
-            {onOpenSheetMetalModal && (
-              <button
-                onClick={() => {
-                  setIsMobileMenuOpen(false);
-                  onOpenSheetMetalModal();
-                }}
-                className="flex items-center gap-2 p-2.5 rounded-xl bg-[#0B1E17] hover:bg-[#102B21] border border-[rgba(16,185,129,0.2)] text-xs font-mono text-[#F0FDF4] transition-all cursor-pointer"
-              >
-                <Layers className="w-4 h-4 text-[#00F5A0] shrink-0" />
-                <div className="text-left min-w-0">
-                  <div className="truncate">Sheet Metal</div>
-                  <div className="text-[10px] text-[#8CA89E] font-normal">Flange & K-Factor</div>
-                </div>
-              </button>
-            )}
-
-            {/* Surfacing */}
-            {onOpenSurfacingModal && (
-              <button
-                onClick={() => {
-                  setIsMobileMenuOpen(false);
-                  onOpenSurfacingModal();
-                }}
-                className="flex items-center gap-2 p-2.5 rounded-xl bg-[#0B1E17] hover:bg-[#102B21] border border-[rgba(16,185,129,0.2)] text-xs font-mono text-[#F0FDF4] transition-all cursor-pointer"
-              >
-                <Compass className="w-4 h-4 text-[#00F5A0] shrink-0" />
-                <div className="text-left min-w-0">
-                  <div className="truncate">Surfacing</div>
-                  <div className="text-[10px] text-[#8CA89E] font-normal">Loft, Sweep, Patch</div>
-                </div>
-              </button>
-            )}
-
-            {/* FEA Simulation */}
-            {onOpenFEAModal && (
-              <button
-                onClick={() => {
-                  setIsMobileMenuOpen(false);
-                  onOpenFEAModal();
-                }}
-                className="flex items-center gap-2 p-2.5 rounded-xl bg-[#0B1E17] hover:bg-[#102B21] border border-[rgba(16,185,129,0.2)] text-xs font-mono text-[#F0FDF4] transition-all cursor-pointer"
-              >
-                <Activity className="w-4 h-4 text-[#00F5A0] shrink-0" />
-                <div className="text-left min-w-0">
-                  <div className="truncate">FEA Simulation</div>
-                  <div className="text-[10px] text-[#8CA89E] font-normal">Von Mises Stress</div>
-                </div>
-              </button>
-            )}
-
-            {/* Collaborate */}
-            {onOpenCollaborationModal && (
-              <button
-                onClick={() => {
-                  setIsMobileMenuOpen(false);
-                  onOpenCollaborationModal();
-                }}
-                className="flex items-center gap-2 p-2.5 rounded-xl bg-[#0B1E17] hover:bg-[#102B21] border border-[rgba(16,185,129,0.2)] text-xs font-mono text-[#F0FDF4] transition-all cursor-pointer"
-              >
-                <Share2 className="w-4 h-4 text-[#00F5A0] shrink-0" />
-                <div className="text-left min-w-0">
-                  <div className="truncate">Collaborate</div>
-                  <div className="text-[10px] text-[#8CA89E] font-normal">Version Snapshots</div>
-                </div>
-              </button>
-            )}
-
-            {/* Integrations */}
-            {onOpenIntegrationsModal && (
-              <button
-                onClick={() => {
-                  setIsMobileMenuOpen(false);
-                  onOpenIntegrationsModal();
-                }}
-                className="flex items-center gap-2 p-2.5 rounded-xl bg-[#0B1E17] hover:bg-[#102B21] border border-[rgba(16,185,129,0.2)] text-xs font-mono text-[#F0FDF4] transition-all cursor-pointer"
-              >
-                <Cloud className="w-4 h-4 text-[#00F5A0] shrink-0" />
-                <div className="text-left min-w-0">
-                  <div className="truncate">Cloud & CAD Integrations</div>
-                  <div className="text-[10px] text-[#00F5A0] font-normal">7 Clouds / SolidWorks</div>
-                </div>
-              </button>
-            )}
-
-            {/* Generative Design */}
-            {onOpenGenerativeDesignModal && (
-              <button
-                onClick={() => {
-                  setIsMobileMenuOpen(false);
-                  onOpenGenerativeDesignModal();
-                }}
-                className="flex items-center gap-2 p-2.5 rounded-xl bg-[#0B1E17] hover:bg-[#102B21] border border-[rgba(16,185,129,0.2)] text-xs font-mono text-[#F0FDF4] transition-all cursor-pointer"
-              >
-                <Network className="w-4 h-4 text-[#00F5A0] shrink-0" />
-                <div className="text-left min-w-0">
-                  <div className="truncate">Generative Design</div>
-                  <div className="text-[10px] text-[#8CA89E] font-normal">Topology SIMP</div>
-                </div>
-              </button>
-            )}
-
-            {/* Plugins */}
-            {onOpenPluginManagerModal && (
-              <button
-                onClick={() => {
-                  setIsMobileMenuOpen(false);
-                  onOpenPluginManagerModal();
-                }}
-                className="flex items-center gap-2 p-2.5 rounded-xl bg-[#0B1E17] hover:bg-[#102B21] border border-[rgba(16,185,129,0.2)] text-xs font-mono text-[#F0FDF4] transition-all cursor-pointer"
-              >
-                <Puzzle className="w-4 h-4 text-[#00F5A0] shrink-0" />
-                <div className="text-left min-w-0">
-                  <div className="truncate">Plugins & SDK</div>
-                  <div className="text-[10px] text-[#8CA89E] font-normal">Extensions Manager</div>
-                </div>
-              </button>
-            )}
-
-            {/* VIRA AI Bot */}
-            <button
-              onClick={() => {
-                setIsMobileMenuOpen(false);
-                onOpenViraBot();
-              }}
-              className="flex items-center gap-2 p-2.5 rounded-xl bg-[#0B1E17] hover:bg-[#102B21] border border-[#00F5A0]/30 text-xs font-mono text-[#00F5A0] transition-all cursor-pointer"
-            >
-              <Bot className="w-4 h-4 text-[#00F5A0] shrink-0" />
-              <div className="text-left min-w-0">
-                <div className="truncate">VIRA AI</div>
-                <div className="text-[10px] text-[#8CA89E] font-normal">Engineering Bot</div>
-              </div>
-            </button>
-
-            {/* Test Benchmarks */}
-            <button
-              onClick={() => {
-                setIsMobileMenuOpen(false);
-                onOpenTestSuiteModal();
-              }}
-              className="flex items-center gap-2 p-2.5 rounded-xl bg-[#0B1E17] hover:bg-[#102B21] border border-[rgba(16,185,129,0.2)] text-xs font-mono text-[#F0FDF4] transition-all cursor-pointer"
-            >
-              <Activity className="w-4 h-4 text-[#00F5A0] shrink-0" />
-              <div className="text-left min-w-0">
-                <div className="truncate">Benchmarks</div>
-                <div className="text-[10px] text-[#8CA89E] font-normal">Automated Tests</div>
-              </div>
-            </button>
-
-            {/* Founder Profile */}
-            <button
-              onClick={() => {
-                setIsMobileMenuOpen(false);
-                onOpenMakerModal();
-              }}
-              className="flex items-center gap-2 p-2.5 rounded-xl bg-[#0B1E17] hover:bg-[#102B21] border border-[rgba(16,185,129,0.2)] text-xs font-mono text-[#F0FDF4] transition-all cursor-pointer"
-            >
-              <UserCheck className="w-4 h-4 text-[#00F5A0] shrink-0" />
-              <div className="text-left min-w-0">
-                <div className="truncate">Founder</div>
-                <div className="text-[10px] text-[#8CA89E] font-normal">Viraj Bansod</div>
-              </div>
-            </button>
-
-            {/* Theme Toggle in Mobile Drawer */}
-            <button
-              id="btn-mobile-theme-toggle"
-              type="button"
-              onClick={() => {
-                toggleTheme();
-              }}
-              className="flex items-center gap-2 p-2.5 rounded-xl bg-[#0B1E17] hover:bg-[#102B21] border border-[rgba(16,185,129,0.25)] text-xs font-mono text-[#F0FDF4] transition-all cursor-pointer"
-            >
-              {isDark ? (
-                <Sun className="w-4 h-4 text-[#F59E0B] shrink-0" />
-              ) : (
-                <Moon className="w-4 h-4 text-[#00B377] shrink-0" />
-              )}
-              <div className="text-left min-w-0">
-                <div className="truncate">{isDark ? 'Light Theme' : 'Dark Theme'}</div>
-                <div className="text-[10px] text-[#8CA89E] font-normal">
-                  {isDark ? 'Switch to Clean Light' : 'Switch to Obsidian'}
-                </div>
-              </div>
-            </button>
-
-            {/* Material & Cost Estimator in Mobile Drawer */}
-            {onOpenCostEstimatorModal && (
-              <button
-                id="btn-mobile-cost-estimator"
-                type="button"
-                onClick={() => {
-                  setIsMobileMenuOpen(false);
-                  onOpenCostEstimatorModal();
-                }}
-                className="flex items-center gap-2 p-2.5 rounded-xl bg-[#0B1E17] hover:bg-[#102B21] border border-[rgba(16,185,129,0.25)] text-xs font-mono text-[#F0FDF4] transition-all cursor-pointer"
-              >
-                <Calculator className="w-4 h-4 text-[#00F5A0] shrink-0" />
-                <div className="text-left min-w-0">
-                  <div className="truncate">Material & Cost Estimator</div>
-                  <div className="text-[10px] text-[#8CA89E] font-normal">Part & Assembly BOM Rollup</div>
-                </div>
-              </button>
-            )}
-
-            {/* Engineering Checks in Mobile Drawer */}
-            {onOpenEngineeringChecksModal && (
-              <button
-                id="btn-mobile-engineering-checks"
-                type="button"
-                onClick={() => {
-                  setIsMobileMenuOpen(false);
-                  onOpenEngineeringChecksModal();
-                }}
-                className="flex items-center gap-2 p-2.5 rounded-xl bg-[#0B1E17] hover:bg-[#102B21] border border-[rgba(16,185,129,0.25)] text-xs font-mono text-[#F0FDF4] transition-all cursor-pointer"
-              >
-                <ShieldCheck className="w-4 h-4 text-[#00F5A0] shrink-0" />
-                <div className="text-left min-w-0">
-                  <div className="truncate">Engineering Checks & DFM</div>
-                  <div className="text-[10px] text-[#8CA89E] font-normal">Rules, FEA & PDF Reports</div>
-                </div>
-              </button>
-            )}
-
-            {/* Projects Dashboard in Mobile Drawer */}
-            {onOpenDashboard && (
-              <button
-                id="btn-mobile-projects"
-                type="button"
-                onClick={() => {
-                  setIsMobileMenuOpen(false);
-                  onOpenDashboard();
-                }}
-                className="flex items-center gap-2 p-2.5 rounded-xl bg-[#0B1E17] hover:bg-[#102B21] border border-[rgba(16,185,129,0.25)] text-xs font-mono text-[#F0FDF4] transition-all cursor-pointer"
-              >
-                <FolderOpen className="w-4 h-4 text-[#00F5A0] shrink-0" />
-                <div className="text-left min-w-0">
-                  <div className="truncate">Projects Dashboard</div>
-                  <div className="text-[10px] text-[#8CA89E] font-normal">Search & Filter CAD Files</div>
-                </div>
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* STEP Solid Notification Toast                                             */}
-      {/* ========================================================================= */}
+      {/* STEP Solid Notification Toast */}
       {showStepNotification && (
-        <div className="absolute top-16 right-4 z-50 p-3.5 bg-[#0B1E17] border border-[#00F5A0]/40 rounded-lg shadow-2xl flex items-start gap-3 max-w-sm text-xs animate-in fade-in text-[#F0FDF4]">
-          <Sparkles className="w-4 h-4 text-[#00F5A0] shrink-0 mt-0.5" />
+        <div className="absolute top-[70px] right-4 z-50 p-4 bg-[#0B1E17] border border-[#00F5A0]/40 rounded-lg shadow-2xl flex items-start gap-3 max-w-sm text-sm animate-in fade-in text-[#F0FDF4]">
+          <Sparkles className="w-5 h-5 text-[#00F5A0] shrink-0" />
           <div className="space-y-1">
-            <div className="font-semibold text-[#00F5A0] font-mono">B-Rep STEP Solid Model</div>
-            <p className="text-[#8CA89E] font-sans leading-relaxed">
+            <div className="font-semibold text-[#00F5A0] font-sans">B-Rep STEP Solid Model</div>
+            <p className="text-[#8CA89E] font-sans leading-relaxed text-xs">
               STL export is ready for 3D printing and CAM milling. Native STEP NURBS solid export is supported via JSON definition.
             </p>
           </div>
         </div>
       )}
-    </header>
+    </motion.header>
   );
+
 };

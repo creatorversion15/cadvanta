@@ -23,28 +23,29 @@ export const TestSuiteModal: React.FC<TestSuiteModalProps> = ({
   const currentTest = TEST_SUITE.find((t) => t.id === selectedTestId) || TEST_SUITE[0];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
-      <div className="relative w-full max-w-4xl bg-white border-2 border-black rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 bg-black/75 backdrop-blur-xs animate-in fade-in">
+      <div className="relative w-full h-full sm:h-auto sm:max-w-4xl bg-white sm:border-2 sm:border-black sm:rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-none sm:max-h-[90vh]">
         {/* Header */}
-        <div className="p-3.5 bg-zinc-50 border-b border-zinc-200 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Activity className="w-4 h-4 text-black" />
-            <h3 className="font-bold text-black font-mono text-xs uppercase tracking-wide">
-              CADVANTA Engineering Benchmark & Test Suite
+        <div className="p-3 sm:p-3.5 bg-zinc-50 border-b border-zinc-200 flex items-center justify-between gap-2 shrink-0">
+          <div className="flex items-center gap-2 min-w-0">
+            <Activity className="w-4 h-4 text-black shrink-0" />
+            <h3 className="font-bold text-black font-mono text-xs uppercase tracking-wide truncate">
+              CADVANTA Benchmark & Test Suite
             </h3>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-zinc-500 hover:text-black hover:bg-zinc-200 rounded-lg transition-colors"
+            className="p-2 min-w-[36px] min-h-[36px] flex items-center justify-center text-zinc-500 hover:text-black hover:bg-zinc-200 rounded-lg transition-colors cursor-pointer"
+            aria-label="Close test suite"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Content Body */}
-        <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+        <div className="flex-1 flex flex-col md:flex-row overflow-y-auto md:overflow-hidden min-h-0">
           {/* Test Case Selection List */}
-          <div className="w-full md:w-80 border-r border-zinc-200 bg-zinc-50 p-3 space-y-2 overflow-y-auto">
+          <div className="w-full md:w-80 border-b md:border-b-0 md:border-r border-zinc-200 bg-zinc-50 p-3 space-y-2 shrink-0 max-h-48 md:max-h-none overflow-y-auto">
             <div className="text-[10px] font-mono uppercase text-zinc-500 font-bold px-1">
               Test Scenarios
             </div>
@@ -52,13 +53,13 @@ export const TestSuiteModal: React.FC<TestSuiteModalProps> = ({
               <button
                 key={t.id}
                 onClick={() => setSelectedTestId(t.id)}
-                className={`w-full text-left p-2.5 rounded-lg border transition-all text-xs flex flex-col gap-1 ${
+                className={`w-full text-left p-3 min-h-[44px] rounded-lg border transition-all text-xs flex flex-col gap-1 cursor-pointer ${
                   selectedTestId === t.id
                     ? 'bg-black text-white font-bold shadow-sm border-black'
                     : 'bg-white border-zinc-200 text-zinc-700 hover:text-black hover:border-zinc-400'
                 }`}
               >
-                <div className="font-bold font-mono">{t.title}</div>
+                <div className="font-bold font-mono text-xs leading-snug">{t.title}</div>
                 <div
                   className={`text-[10px] font-sans line-clamp-2 ${
                     selectedTestId === t.id ? 'text-zinc-300' : 'text-zinc-500'
@@ -71,7 +72,7 @@ export const TestSuiteModal: React.FC<TestSuiteModalProps> = ({
           </div>
 
           {/* Test Details & Execution Console */}
-          <div className="flex-1 p-5 bg-white flex flex-col justify-between overflow-y-auto">
+          <div className="flex-1 p-4 sm:p-5 bg-white flex flex-col justify-between overflow-y-auto gap-4">
             <div className="space-y-4">
               <div>
                 <div className="text-xs font-mono text-zinc-500 font-semibold uppercase">Selected Test</div>
@@ -87,7 +88,7 @@ export const TestSuiteModal: React.FC<TestSuiteModalProps> = ({
                   <Terminal className="w-3.5 h-3.5 text-black" />
                   <span>Engineering Prompt String</span>
                 </div>
-                <div className="p-3 bg-zinc-50 border border-zinc-300 rounded-lg font-mono text-xs text-zinc-900 leading-relaxed select-all">
+                <div className="p-3 bg-zinc-50 border border-zinc-300 rounded-lg font-mono text-xs text-zinc-900 leading-relaxed select-all break-words">
                   {currentTest.prompt}
                 </div>
               </div>
@@ -120,7 +121,7 @@ export const TestSuiteModal: React.FC<TestSuiteModalProps> = ({
                   onRunTest(currentTest.prompt);
                   onClose();
                 }}
-                className="px-5 py-2.5 bg-black text-white hover:bg-zinc-800 font-black rounded-lg text-xs font-mono uppercase tracking-wider flex items-center gap-2 transition-all shadow-md active:scale-95"
+                className="w-full sm:w-auto px-5 py-3 min-h-[44px] bg-black text-white hover:bg-zinc-800 font-black rounded-lg text-xs font-mono uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-md active:scale-95 cursor-pointer"
               >
                 <Play className="w-3.5 h-3.5 fill-current" />
                 <span>Execute Benchmark In CADVANTA</span>

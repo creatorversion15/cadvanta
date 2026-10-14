@@ -2,44 +2,44 @@ import { MaterialInfo } from '../types/cad';
 
 export const MATERIALS: MaterialInfo[] = [
   {
-    id: 'steel_1018',
-    name: 'IS 2062 / AISI 1018 Structural Mild Steel',
-    standard: 'IS 2062 Gr E250 / ASTM A108 / EN3B',
+    id: 'steel_a36',
+    name: 'Structural Steel (ASTM A36 / IS 2062)',
+    standard: 'ASTM A36 / IS 2062 Gr E250',
     category: 'Ferrous',
-    density: 7.87, // g/cm³
-    youngsModulus: 205, // GPa
-    yieldStrength: 250, // MPa (IS 2062 E250 standard yield)
-    tensileStrength: 410, // MPa
+    density: 7.85, // 7850 kg/m³
+    youngsModulus: 200, // 200 GPa
+    yieldStrength: 250, // 250 MPa
+    tensileStrength: 400, // MPa
     poissonsRatio: 0.29,
-    thermalExpansion: 11.5, // µm/(m·K)
-    thermalConductivity: 51.9, // W/(m·K)
+    thermalExpansion: 11.5,
+    thermalConductivity: 51.9,
     machinabilityRating: 78,
-    costPerKg: 75.0, // ₹ 75 / kg (Indian market steel benchmark - SAIL/Jindal)
+    costPerKg: 75.0,
     costPerKgInr: 75.0,
     color: '#94a3b8',
     roughness: 0.35,
     metalness: 0.85,
-    description: 'Standard Indian structural & machine building steel (IS 2062) with superior weldability and CNC machinability for baseplates, brackets, pins, and mounting flanges.',
+    description: 'Structural mild steel (ASTM A36 / IS 2062): E=200 GPa, yield=250 MPa, density=7850 kg/m³.',
   },
   {
-    id: 'en8_steel',
-    name: 'EN8 / 080M40 / C45 Carbon Steel (IS 5517)',
-    standard: 'IS 5517 40C8 / BS 970 / AISI 1045',
+    id: 'steel_c45',
+    name: 'Steel C45 (EN8 / AISI 1045)',
+    standard: 'EN 10083-2 C45 / IS 5517 40C8 / AISI 1045',
     category: 'Ferrous',
-    density: 7.85,
-    youngsModulus: 210,
-    yieldStrength: 465,
-    tensileStrength: 660,
+    density: 7.85, // 7850 kg/m³
+    youngsModulus: 205, // 205 GPa
+    yieldStrength: 530, // 530 MPa
+    tensileStrength: 650, // MPa
     poissonsRatio: 0.29,
     thermalExpansion: 11.2,
     thermalConductivity: 49.0,
     machinabilityRating: 65,
-    costPerKg: 95.0, // ₹ 95 / kg (Indian engineering steel standard)
+    costPerKg: 95.0,
     costPerKgInr: 95.0,
     color: '#8492a6',
     roughness: 0.3,
     metalness: 0.9,
-    description: 'Premier Indian shaft and gear manufacturing steel (IS 5517) widely used across Pune and Coimbatore industrial hubs for motor axles, studs, drive keys, and rigid couplings.',
+    description: 'Medium carbon engineering steel (C45 / EN8): E=205 GPa, yield=530 MPa, density=7850 kg/m³.',
   },
   {
     id: 'en19_steel',
@@ -63,23 +63,23 @@ export const MATERIALS: MaterialInfo[] = [
   },
   {
     id: 'stainless_304',
-    name: 'AISI 304 Stainless Steel (IS 6911 / 1.4301)',
-    standard: 'IS 6911 Gr 04Cr18Ni10 / ASTM A240 (18/8 SS)',
+    name: 'Stainless Steel 304 (AISI 304 / 1.4301)',
+    standard: 'ASTM A240 / IS 6911 (18/8 SS)',
     category: 'Ferrous',
-    density: 8.0,
-    youngsModulus: 193,
-    yieldStrength: 290,
-    tensileStrength: 620,
+    density: 8.0, // 8000 kg/m³
+    youngsModulus: 193, // 193 GPa
+    yieldStrength: 215, // 215 MPa
+    tensileStrength: 505, // MPa
     poissonsRatio: 0.29,
     thermalExpansion: 17.2,
     thermalConductivity: 16.2,
     machinabilityRating: 45,
-    costPerKg: 285.0, // ₹ 285 / kg (Indian SS 304 market benchmark)
+    costPerKg: 285.0,
     costPerKgInr: 285.0,
     color: '#cbd5e1',
     roughness: 0.25,
     metalness: 0.88,
-    description: 'Austenitic food-grade & chemical stainless steel conforming to IS 6911, ideal for pharmaceutical fittings, dairy equipment, food processing flanges, and sanitary pump shafts.',
+    description: 'Austenitic Stainless Steel 304: E=193 GPa, yield=215 MPa, density=8000 kg/m³.',
   },
   {
     id: 'stainless_316',
@@ -103,23 +103,23 @@ export const MATERIALS: MaterialInfo[] = [
   },
   {
     id: 'alu_6061_t6',
-    name: 'Aluminum 6061-T6 (IS 733 / Hindalco Aerospace)',
-    standard: 'IS 733 Gr 65032 / ASTM B221 / EN AW-6061',
+    name: 'Aluminum 6061-T6 (ASTM B221 / IS 733)',
+    standard: 'ASTM B221 / IS 733 Gr 65032 / EN AW-6061',
     category: 'Non-Ferrous',
-    density: 2.7,
-    youngsModulus: 68.9,
-    yieldStrength: 276,
+    density: 2.7, // 2700 kg/m³
+    youngsModulus: 69.0, // 69 GPa
+    yieldStrength: 276, // 276 MPa
     tensileStrength: 310,
     poissonsRatio: 0.33,
     thermalExpansion: 23.2,
     thermalConductivity: 167,
     machinabilityRating: 90,
-    costPerKg: 320.0, // ₹ 320 / kg (Indian standard extruded aluminium)
+    costPerKg: 320.0,
     costPerKgInr: 320.0,
     color: '#e2e8f0',
     roughness: 0.3,
     metalness: 0.7,
-    description: 'Structural heat-treated aluminum alloy (IS 733 / Hindalco/Nalco) offering high strength-to-weight ratio, anodizability, and rapid CNC machining for robotics and UAV frames.',
+    description: 'Heat-treated Aluminum 6061-T6: E=69 GPa, yield=276 MPa, density=2700 kg/m³.',
   },
   {
     id: 'alu_7075_t6',
@@ -142,24 +142,24 @@ export const MATERIALS: MaterialInfo[] = [
     description: 'Ultra-high strength zinc-alloyed aerospace aluminum (IS 733) offering steel-equivalent strength at 1/3rd mass for planetary carrier plates, racing linkages, and drone arms.',
   },
   {
-    id: 'brass_c360',
-    name: 'Brass C36000 / IS 319 Free-Cutting Brass',
-    standard: 'IS 319 Gr 1 / ASTM B16 / EN CW614N',
+    id: 'brass',
+    name: 'Brass (Free-Cutting / C36000)',
+    standard: 'ASTM B16 / IS 319 / EN CW614N',
     category: 'Non-Ferrous',
-    density: 8.5,
-    youngsModulus: 97,
-    yieldStrength: 310,
-    tensileStrength: 450,
+    density: 8.5, // 8500 kg/m³
+    youngsModulus: 100, // 100 GPa
+    yieldStrength: 200, // 200 MPa
+    tensileStrength: 350,
     poissonsRatio: 0.31,
     thermalExpansion: 20.5,
     thermalConductivity: 115,
-    machinabilityRating: 100, // 100% Indian benchmark
-    costPerKg: 590.0, // ₹ 590 / kg (Indian free cutting brass standard)
+    machinabilityRating: 100,
+    costPerKg: 590.0,
     costPerKgInr: 590.0,
     color: '#eab308',
     roughness: 0.28,
     metalness: 0.85,
-    description: 'Industry benchmark for machinability (IS 319 Gr 1 - Jamnagar Brass Hub standard) for precision threaded fasteners, bushings, pneumatic fittings, and valve stems.',
+    description: 'Free-cutting brass: E=100 GPa, yield=200 MPa, density=8500 kg/m³.',
   },
   {
     id: 'bronze_c932',
@@ -182,24 +182,44 @@ export const MATERIALS: MaterialInfo[] = [
     description: 'Heavy-duty antifriction bearing bronze conforming to IS 28 for sleeve bushings, worm wheels, hydraulic pump wear plates, and high-load low-speed journals.',
   },
   {
-    id: 'cast_iron_250',
-    name: 'Grey Cast Iron FG 260 (IS 210 / Grade 250)',
-    standard: 'IS 210 Gr FG 260 / ISO 185 / ASTM Class 35',
-    category: 'Ferrous',
-    density: 7.2,
-    youngsModulus: 110,
-    yieldStrength: 165,
+    id: 'copper_c110',
+    name: 'Copper C11000 / IS 191 ETP Copper',
+    standard: 'IS 191 ETP / ASTM B152 / EN CW004A',
+    category: 'Non-Ferrous',
+    density: 8.94,
+    youngsModulus: 117,
+    yieldStrength: 195,
     tensileStrength: 260,
+    poissonsRatio: 0.34,
+    thermalExpansion: 16.5,
+    thermalConductivity: 391,
+    machinabilityRating: 20,
+    costPerKg: 740.0,
+    costPerKgInr: 740.0,
+    color: '#b45309',
+    roughness: 0.3,
+    metalness: 0.9,
+    description: 'High-purity Electrolytic Tough Pitch (ETP) Copper conforming to IS 191 with outstanding thermal and electrical conductivity for busbars, heat exchangers, and EDM electrodes.',
+  },
+  {
+    id: 'cast_iron_250',
+    name: 'Cast Iron (Grade 250 / IS 210 FG 260)',
+    standard: 'ISO 185 / Grade 250 / ASTM Class 35',
+    category: 'Ferrous',
+    density: 7.2, // 7200 kg/m³
+    youngsModulus: 110, // 110 GPa
+    yieldStrength: 250, // 250 MPa
+    tensileStrength: 250, // 250 MPa
     poissonsRatio: 0.26,
     thermalExpansion: 10.5,
     thermalConductivity: 46,
     machinabilityRating: 85,
-    costPerKg: 68.0, // ₹ 68 / kg (Indian foundry casting benchmark: Rajkot / Coimbatore)
+    costPerKg: 68.0,
     costPerKgInr: 68.0,
     color: '#475569',
     roughness: 0.6,
     metalness: 0.6,
-    description: 'Standard Indian foundry grey iron (IS 210 FG 260) with superior vibration damping and wear resistance for gearbox casings, motor end shields, and machine tool slideways.',
+    description: 'Cast iron (grade 250): E=110 GPa, tensile strength=250 MPa, density=7200 kg/m³.',
   },
   {
     id: 'titanium_gr5',

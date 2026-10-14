@@ -304,7 +304,7 @@ export const GenerativeDesignModal: React.FC<GenerativeDesignModalProps> = ({
                       <div className="bg-[#071510] p-2.5 rounded-lg border border-[rgba(16,185,129,0.15)]">
                         <span className="text-[10px] text-[#8CA89E] block">Printability / DFM</span>
                         <strong className="text-sm text-[#00F5A0]">{currentCandidate.printabilityScore}/100</strong>
-                        <span className="text-[10px] text-[#8CA89E] block">{currentCandidate.recommendedProcess.split(' ')[0]}</span>
+                        <span className="text-[10px] text-[#8CA89E] block">{(currentCandidate?.recommendedProcess || 'CNC Machining').split(' ')[0]}</span>
                       </div>
                     </div>
 

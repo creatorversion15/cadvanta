@@ -39,10 +39,15 @@
 
   body {
     font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background-color: #030A07;
-    color: #F0FDF4;
+    background-color: #F8FAFC;
+    color: #0F172A;
     margin: 0;
     overflow: hidden;
+  }
+
+  html.dark body, [data-theme="dark"] body {
+    background-color: #030A07;
+    color: #F0FDF4;
   }
 
   code, pre, .font-mono {
@@ -55,23 +60,36 @@
   }
 }
 
-/* Engineering CAD scrollbar styling for deep emerald workstation */
+/* Engineering CAD scrollbar styling */
 ::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #030A07;
+  background: #F1F5F9;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #0E261D;
-  border: 1px solid rgba(16, 185, 129, 0.18);
-  border-radius: 3px;
+  background: #CBD5E1;
+  border: 1px solid #E2E8F0;
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
+
+html.dark ::-webkit-scrollbar-track, [data-theme="dark"] ::-webkit-scrollbar-track {
+  background: #030A07;
+}
+
+html.dark ::-webkit-scrollbar-thumb, [data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: #0E261D;
+  border: 1px solid rgba(16, 185, 129, 0.18);
+}
+
+html.dark ::-webkit-scrollbar-thumb:hover, [data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
   background: #1B4536;
 }
 
@@ -203,6 +221,54 @@ html.light ::-webkit-scrollbar-thumb {
   border: 1px solid #94A3B8;
 }
 
+/* =========================================================================
+   ASSEMBLY MODEL GROUP - SMOOTH EXPLODED VIEW CSS TRANSITIONS
+   Provides realistic spatial separation, perspective, and disassembly cues
+   ========================================================================= */
+.assembly-model-group-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  perspective: 1400px;
+  transform-style: preserve-3d;
+  transition: transform 0.75s cubic-bezier(0.16, 1, 0.3, 1),
+              filter 0.75s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.75s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform, filter;
+}
 
+.assembly-model-group-wrapper.exploded-active {
+  transform: perspective(1400px) scale(0.97) rotateX(1.5deg) translateY(-2px);
+  filter: contrast(1.05) saturate(1.08) drop-shadow(0 25px 35px rgba(0, 0, 0, 0.15));
+}
 
+.assembly-model-group-wrapper.exploded-compact {
+  transform: perspective(1400px) scale(1) rotateX(0deg) translateY(0);
+  filter: contrast(1) saturate(1) drop-shadow(0 0 0 rgba(0, 0, 0, 0));
+}
 
+/* Disassembled Part Indicator Badges & Axis Callouts */
+.assembly-part-tag {
+  transition: transform 0.65s cubic-bezier(0.34, 1.56, 0.64, 1),
+              opacity 0.55s ease,
+              box-shadow 0.55s ease;
+  will-change: transform, opacity;
+}
+
+.assembly-part-tag:hover {
+  transform: translateX(4px) scale(1.03) !important;
+  box-shadow: 0 8px 16px rgba(0, 245, 160, 0.15);
+}
+
+@keyframes assembly-pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 15px rgba(16, 185, 129, 0.15);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(16, 185, 129, 0.35);
+  }
+}
+
+.exploded-active .assembly-glow-ring {
+  animation: assembly-pulse-glow 3s infinite ease-in-out;
+}

@@ -1,4 +1,5 @@
 import React from 'react';
+import { CadVantaLogo, CadVantaLogoMark } from '../Brand/CadVantaLogo';
 import {
   X,
   Linkedin,
@@ -88,12 +89,12 @@ export const MakerProfileModal: React.FC<MakerProfileModalProps> = ({
             {/* Precision CAD Emblem with Mint Glow (No founder image, geometric crest only) */}
             <div className="relative group shrink-0">
               <div className="w-24 h-24 rounded-2xl p-0.5 shadow-xl bg-gradient-to-tr from-[#00F5A0] via-[#102B21] to-[#071510]">
-                <div className="w-full h-full rounded-2xl border-2 border-[#071510] bg-[#0B1E17] flex flex-col items-center justify-center relative overflow-hidden">
+                <div className="w-full h-full rounded-2xl border-2 border-[#071510] bg-[#0B1E17] flex flex-col items-center justify-center relative overflow-hidden p-2">
                   {/* Subtle Grid Reticle in background */}
                   <div className="absolute inset-0 bg-cad-grid opacity-30 pointer-events-none" />
-                  <Boxes className="w-8 h-8 text-[#00F5A0] mb-1" />
-                  <span className="font-mono font-black text-sm text-[#F0FDF4] tracking-wider">
-                    VB<span className="text-[#00F5A0]">.CAD</span>
+                  <CadVantaLogoMark size={50} className="mb-0.5" />
+                  <span className="font-mono font-black text-[11px] text-[#F0FDF4] tracking-wider">
+                    CAD<span className="text-[#00F5A0]">VANTA</span>
                   </span>
                 </div>
               </div>
@@ -122,14 +123,9 @@ export const MakerProfileModal: React.FC<MakerProfileModalProps> = ({
 
           {/* Project Identity Spotlight */}
           <div className="p-4 bg-[#0B1E17] border border-[rgba(16,185,129,0.18)] rounded-xl space-y-2.5">
-            <div className="flex items-center justify-between border-b border-[rgba(16,185,129,0.12)] pb-2">
-              <div className="flex items-center gap-2">
-                <Boxes className="w-4 h-4 text-[#00F5A0]" />
-                <span className="text-xs font-mono font-bold uppercase tracking-wider text-[#F0FDF4]">
-                  CADVANTA — Project Identity
-                </span>
-              </div>
-              <span className="text-[10px] font-mono text-[#00F5A0] bg-[#00F5A0]/10 px-2 py-0.5 rounded border border-[#00F5A0]/20">
+            <div className="flex items-center justify-between border-b border-[rgba(16,185,129,0.12)] pb-2.5">
+              <CadVantaLogo variant="full" size="md" showTagline />
+              <span className="text-[10px] font-mono text-[#00F5A0] bg-[#00F5A0]/10 px-2 py-0.5 rounded border border-[#00F5A0]/20 hidden sm:inline-block">
                 AI Mechanical CAD
               </span>
             </div>

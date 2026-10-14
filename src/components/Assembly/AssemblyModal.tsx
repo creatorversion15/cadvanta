@@ -3,6 +3,9 @@ import { AssemblyComponent, AssemblyConstraint, CADPart, PartType } from '../../
 import {
   createDefaultAssemblyPreset,
   solveAssemblyMates,
+  getMateColor,
+  SmartMateSuggestion,
+  MatingPoint,
 } from '../../engine/assemblySolver';
 import {
   MATERIALS,
@@ -10,6 +13,7 @@ import {
   calculateMass,
   calculatePartVolumeCm3,
 } from '../../engine/materials';
+import { AssemblyPreview3D } from './AssemblyPreview3D';
 import {
   X,
   Layers,
@@ -26,13 +30,22 @@ import {
   Move,
   RotateCw,
   AlertTriangle,
+  Target,
+  ArrowRight,
+  Info,
+  Check,
 } from 'lucide-react';
 
 interface AssemblyModalProps {
   isOpen: boolean;
   onClose: () => void;
   activePart: CADPart;
-  onUpdateAssembly?: (components: AssemblyComponent[], constraints: AssemblyConstraint[], explodePct: number) => void;
+  onUpdateAssembly?: (
+    components: AssemblyComponent[],
+    constraints: AssemblyConstraint[],
+    explodePct: number,
+    showMatingIndicators?: boolean
+  ) => void;
 }
 
 export const AssemblyModal: React.FC<AssemblyModalProps> = ({
@@ -47,15 +60,42 @@ export const AssemblyModal: React.FC<AssemblyModalProps> = ({
   const [components, setComponents] = useState<AssemblyComponent[]>(defaultAssembly.components);
   const [constraints, setConstraints] = useState<AssemblyConstraint[]>(defaultAssembly.constraints);
   const [explodePct, setExplodePct] = useState<number>(0);
-  const [activeTab, setActiveTab] = useState<'components' | 'mates' | 'bom' | 'clashes'>('components');
+  const [activeTab, setActiveTab] = useState<'smart_assistant' | 'components' | 'mates' | 'bom' | 'clashes'>('smart_assistant');
+
+  // Mating points visual indicator states
+  const [showMatingIndicators, setShowMatingIndicators] = useState<boolean>(true);
+  const [highlightedMateId, setHighlightedMateId] = useState<string | null>(null);
 
   // Form states for adding a new mate
   const [newMateType, setNewMateType] = useState<AssemblyConstraint['type']>('coincident');
   const [mateCompA, setMateCompA] = useState<string>(components[0]?.id || '');
   const [mateCompB, setMateCompB] = useState<string>(components[1]?.id || '');
   const [mateValue, setMateValue] = useState<number>(0);
+  const [expandedTransformCompId, setExpandedTransformCompId] = useState<string | null>(null);
+
+  const handleUpdateComponentTransform = (
+    compId: string,
+    field: 'posX' | 'posY' | 'posZ' | 'rotX' | 'rotY' | 'rotZ',
+    val: number
+  ) => {
+    setComponents((prev) =>
+      prev.map((c) => {
+        if (c.id !== compId) return c;
+        const pos = [...c.position] as [number, number, number];
+        const rot = [...c.rotation] as [number, number, number];
+        if (field === 'posX') pos[0] = val;
+        if (field === 'posY') pos[1] = val;
+        if (field === 'posZ') pos[2] = val;
+        if (field === 'rotX') rot[0] = (val * Math.PI) / 180;
+        if (field === 'rotY') rot[1] = (val * Math.PI) / 180;
+        if (field === 'rotZ') rot[2] = (val * Math.PI) / 180;
+        return { ...c, position: pos, rotation: rot };
+      })
+    );
+  };
 
   const solved = solveAssemblyMates(components, constraints, explodePct);
+
 
   // Material and Cost Rollup for Assembly
   const handleUpdateComponentMaterial = (compId: string, materialId: string) => {
@@ -156,47 +196,108 @@ export const AssemblyModal: React.FC<AssemblyModalProps> = ({
     setConstraints([...constraints, newMate]);
   };
 
+  const handleApplySuggestedMate = (sugg: SmartMateSuggestion) => {
+    const exists = constraints.some(
+      (c) =>
+        c.type === sugg.type &&
+        ((c.componentIdA === sugg.componentIdA && c.componentIdB === sugg.componentIdB) ||
+          (c.componentIdA === sugg.componentIdB && c.componentIdB === sugg.componentIdA))
+    );
+    if (exists) return;
+
+    const newMate: AssemblyConstraint = {
+      id: sugg.id.replace('sugg_', 'mate_'),
+      type: sugg.type,
+      componentIdA: sugg.componentIdA,
+      componentIdB: sugg.componentIdB,
+      value: sugg.suggestedOffset,
+      status: 'satisfied',
+      description: `${sugg.type.toUpperCase()}: ${sugg.name} (${sugg.suggestedOffset}mm)`,
+    };
+    setConstraints((prev) => [...prev, newMate]);
+    setHighlightedMateId(sugg.id);
+  };
+
+  const handleApplyAllSuggestions = () => {
+    const unapplied = solved.smartSuggestions.filter((s) => !s.isApplied);
+    const newMates: AssemblyConstraint[] = unapplied.map((sugg) => ({
+      id: sugg.id.replace('sugg_', 'mate_'),
+      type: sugg.type,
+      componentIdA: sugg.componentIdA,
+      componentIdB: sugg.componentIdB,
+      value: sugg.suggestedOffset,
+      status: 'satisfied' as const,
+      description: `${sugg.type.toUpperCase()}: ${sugg.name} (${sugg.suggestedOffset}mm)`,
+    }));
+    setConstraints((prev) => [...prev, ...newMates]);
+  };
+
   const handleDeleteMate = (id: string) => {
     setConstraints((prev) => prev.filter((m) => m.id !== id));
   };
 
   const handleApplyToScene = () => {
     if (onUpdateAssembly) {
-      onUpdateAssembly(components, constraints, explodePct);
+      onUpdateAssembly(components, constraints, explodePct, showMatingIndicators);
     }
     onClose();
   };
 
+  const handleToggleExplodeModal = () => {
+    const isCurrentlyExploded = explodePct > 0;
+    const startVal = explodePct;
+    const targetVal = isCurrentlyExploded ? 0 : 70;
+    const duration = 650;
+    const startTime = performance.now();
+
+    const animateExplode = (currentTime: number) => {
+      const elapsed = currentTime - startTime;
+      const progress = Math.min(1, elapsed / duration);
+      const ease = progress < 0.5
+        ? 4 * progress * progress * progress
+        : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+
+      const currentVal = Math.round(startVal + (targetVal - startVal) * ease);
+      setExplodePct(currentVal);
+
+      if (progress < 1) {
+        requestAnimationFrame(animateExplode);
+      }
+    };
+
+    requestAnimationFrame(animateExplode);
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#020A07]/85 backdrop-blur-md animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 bg-[#020A07]/85 backdrop-blur-md animate-in fade-in duration-200">
       <div
-        className="relative w-full max-w-5xl max-h-[92vh] bg-gradient-to-b from-[#0A1D16] to-[#05110D] border border-[#00F5A0]/35 rounded-2xl shadow-[0_0_60px_rgba(0,245,160,0.18)] flex flex-col text-[#F0FDF4] overflow-hidden animate-in zoom-in-95 duration-200"
+        className="relative w-full max-w-5xl h-full sm:h-auto max-h-[100vh] sm:max-h-[92vh] bg-gradient-to-b from-[#0A1D16] to-[#05110D] border-0 sm:border border-[#00F5A0]/35 rounded-none sm:rounded-2xl shadow-[0_0_60px_rgba(0,245,160,0.18)] flex flex-col text-[#F0FDF4] overflow-hidden animate-in zoom-in-95 duration-200"
         role="dialog"
         aria-modal="true"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-[rgba(16,185,129,0.2)] bg-[#071510]/80 shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#102B21] border border-[#00F5A0]/40 flex items-center justify-center text-[#00F5A0] shadow-[0_0_15px_rgba(0,245,160,0.25)]">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-[rgba(16,185,129,0.2)] bg-[#071510]/80 shrink-0 gap-3">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#102B21] border border-[#00F5A0]/40 flex items-center justify-center text-[#00F5A0] shadow-[0_0_15px_rgba(0,245,160,0.25)] shrink-0">
               <Layers className="w-5 h-5 text-[#00F5A0]" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-mono uppercase tracking-widest text-[#00F5A0] font-bold">
-                  MULTI-BODY MECHANICAL ASSEMBLY
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-[9px] sm:text-[10px] font-mono uppercase tracking-widest text-[#00F5A0] font-bold">
+                  MULTI-BODY ASSEMBLY
                 </span>
-                <span className="px-1.5 py-0.2 rounded bg-[#00F5A0]/20 text-[#00F5A0] text-[9px] font-mono border border-[#00F5A0]/30 font-bold">
+                <span className="px-1.5 py-0.2 rounded bg-[#00F5A0]/20 text-[#00F5A0] text-[8px] sm:text-[9px] font-mono border border-[#00F5A0]/30 font-bold">
                   {solved.status === 'fully_constrained' ? 'FULLY CONSTRAINED' : 'SOLVED MATE SOLVER'}
                 </span>
               </div>
-              <h2 className="text-lg sm:text-xl font-extrabold font-mono text-[#F0FDF4] tracking-tight">
+              <h2 className="text-sm sm:text-base md:text-lg font-extrabold font-mono text-[#F0FDF4] tracking-tight truncate">
                 Assembly Modeling & Kinematic Mates
               </h2>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <div className="flex bg-[#071510] p-1 rounded-xl border border-[rgba(16,185,129,0.2)]">
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="hidden sm:flex bg-[#071510] p-1 rounded-xl border border-[rgba(16,185,129,0.2)]">
               <button
                 type="button"
                 onClick={() => handleSelectPreset('shaft_drive')}
@@ -219,7 +320,7 @@ export const AssemblyModal: React.FC<AssemblyModalProps> = ({
 
             <button
               onClick={onClose}
-              className="p-1.5 rounded-lg text-[#8CA89E] hover:text-[#F0FDF4] hover:bg-[#102B21] border border-transparent hover:border-[#00F5A0]/30 transition-all cursor-pointer"
+              className="p-2 sm:p-2.5 rounded-xl text-[#8CA89E] hover:text-[#F0FDF4] hover:bg-[#102B21] border border-[rgba(16,185,129,0.2)] min-w-[40px] min-h-[40px] flex items-center justify-center transition-all cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
@@ -227,10 +328,10 @@ export const AssemblyModal: React.FC<AssemblyModalProps> = ({
         </div>
 
         {/* Subheader: Exploded View Slider */}
-        <div className="px-6 py-3 bg-[#071510] border-b border-[rgba(16,185,129,0.15)] flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3 flex-1 min-w-[280px]">
-            <Sliders className="w-4 h-4 text-[#00F5A0]" />
-            <span className="text-xs font-mono font-bold uppercase text-[#8CA89E]">Exploded View:</span>
+        <div className="px-4 sm:px-6 py-2.5 sm:py-3 bg-[#071510] border-b border-[rgba(16,185,129,0.15)] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 flex-1 min-w-0">
+            <Sliders className="w-4 h-4 text-[#00F5A0] shrink-0" />
+            <span className="text-[11px] sm:text-xs font-mono font-bold uppercase text-[#8CA89E] shrink-0">Exploded View:</span>
             <input
               type="range"
               min="0"
@@ -238,19 +339,34 @@ export const AssemblyModal: React.FC<AssemblyModalProps> = ({
               step="1"
               value={explodePct}
               onChange={(e) => setExplodePct(Number(e.target.value))}
-              className="flex-1 accent-[#00F5A0] h-1.5 bg-[#102B21] rounded-lg cursor-pointer"
+              className="flex-1 accent-[#00F5A0] h-2 bg-[#102B21] rounded-lg cursor-pointer"
             />
-            <span className="text-xs font-mono text-[#00F5A0] font-bold w-12 text-right">
+            <span className="text-xs font-mono text-[#00F5A0] font-bold w-10 text-right shrink-0">
               {explodePct}%
             </span>
           </div>
 
           {/* Navigation tabs */}
-          <div className="flex gap-1">
+          <div className="flex gap-1 overflow-x-auto no-scrollbar pb-1 sm:pb-0">
+            <button
+              type="button"
+              onClick={() => setActiveTab('smart_assistant')}
+              className={`px-2.5 sm:px-3 py-1.5 min-h-[36px] rounded-lg font-mono text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
+                activeTab === 'smart_assistant'
+                  ? 'bg-[#102B21] text-[#00F5A0] border border-[#00F5A0]/40 shadow-[0_0_12px_rgba(0,245,160,0.25)]'
+                  : 'text-[#8CA89E] hover:text-[#F0FDF4]'
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5 text-[#00F5A0]" />
+              <span>Smart Assistant</span>
+              <span className="px-1.5 py-0.2 rounded-full bg-[#00F5A0]/20 text-[#00F5A0] text-[9px] font-mono border border-[#00F5A0]/30 font-bold">
+                {solved.smartSuggestions.length}
+              </span>
+            </button>
             <button
               type="button"
               onClick={() => setActiveTab('components')}
-              className={`px-3 py-1.5 rounded-lg font-mono text-xs font-bold transition-all ${
+              className={`px-2.5 sm:px-3 py-1.5 min-h-[36px] rounded-lg font-mono text-xs font-bold transition-all whitespace-nowrap shrink-0 ${
                 activeTab === 'components'
                   ? 'bg-[#102B21] text-[#00F5A0] border border-[#00F5A0]/40'
                   : 'text-[#8CA89E] hover:text-[#F0FDF4]'
@@ -261,7 +377,7 @@ export const AssemblyModal: React.FC<AssemblyModalProps> = ({
             <button
               type="button"
               onClick={() => setActiveTab('mates')}
-              className={`px-3 py-1.5 rounded-lg font-mono text-xs font-bold transition-all ${
+              className={`px-2.5 sm:px-3 py-1.5 min-h-[36px] rounded-lg font-mono text-xs font-bold transition-all whitespace-nowrap shrink-0 ${
                 activeTab === 'mates'
                   ? 'bg-[#102B21] text-[#00F5A0] border border-[#00F5A0]/40'
                   : 'text-[#8CA89E] hover:text-[#F0FDF4]'
@@ -272,36 +388,242 @@ export const AssemblyModal: React.FC<AssemblyModalProps> = ({
             <button
               type="button"
               onClick={() => setActiveTab('bom')}
-              className={`px-3 py-1.5 rounded-lg font-mono text-xs font-bold transition-all ${
+              className={`px-2.5 sm:px-3 py-1.5 min-h-[36px] rounded-lg font-mono text-xs font-bold transition-all whitespace-nowrap shrink-0 ${
                 activeTab === 'bom'
                   ? 'bg-[#102B21] text-[#00F5A0] border border-[#00F5A0]/40'
                   : 'text-[#8CA89E] hover:text-[#F0FDF4]'
               }`}
             >
-              Bill of Materials (BOM)
+              BOM
             </button>
             <button
               type="button"
               onClick={() => setActiveTab('clashes')}
-              className={`px-3 py-1.5 rounded-lg font-mono text-xs font-bold transition-all flex items-center gap-1.5 ${
+              className={`px-2.5 sm:px-3 py-1.5 min-h-[36px] rounded-lg font-mono text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
                 activeTab === 'clashes'
                   ? 'bg-[#102B21] text-[#00F5A0] border border-[#00F5A0]/40'
                   : 'text-[#8CA89E] hover:text-[#F0FDF4]'
               }`}
             >
               <AlertTriangle className={`w-3.5 h-3.5 ${solved.clashDetection.hasClash ? 'text-amber-400' : 'text-[#00F5A0]'}`} />
-              <span>Interference & Clashes</span>
-              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
-                solved.clashDetection.hasClash ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40' : 'bg-[#00F5A0]/20 text-[#00F5A0]'
-              }`}>
-                {solved.clashDetection.totalClashingPairs}
-              </span>
+              <span>Clashes ({solved.clashDetection.totalClashingPairs})</span>
             </button>
           </div>
         </div>
 
         {/* Body Content */}
         <div className="flex-1 overflow-y-auto p-5 sm:p-6">
+          {activeTab === 'smart_assistant' && (
+            <div className="space-y-4">
+              {/* Top Banner & Quick Controls */}
+              <div className="p-4 rounded-xl bg-gradient-to-r from-[#071E14] via-[#092419] to-[#071E14] border border-[#00F5A0]/40 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-[0_4px_20px_rgba(0,245,160,0.12)]">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="p-1 rounded bg-[#00F5A0]/20 text-[#00F5A0] border border-[#00F5A0]/30">
+                      <Sparkles className="w-3.5 h-3.5" />
+                    </span>
+                    <span className="text-xs font-mono font-bold uppercase tracking-wider text-[#00F5A0]">
+                      Smart Assembly Kinematic Assistant
+                    </span>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#102B21] text-[#8CA89E] border border-[rgba(16,185,129,0.3)]">
+                      {solved.smartSuggestions.length} Interfaces Analyzed
+                    </span>
+                  </div>
+                  <p className="text-xs text-[#8CA89E] mt-1">
+                    Color-coded spheres highlight exact mating interfaces (concentric bores, planar shoulders, and fasteners) where components align.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={handleToggleExplodeModal}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold flex items-center gap-1.5 transition-all cursor-pointer border ${
+                      explodePct > 0
+                        ? 'bg-[#102B21] text-[#00F5A0] border-[#00F5A0]/50 shadow-[0_0_10px_rgba(0,245,160,0.2)]'
+                        : 'bg-[#071510] text-[#8CA89E] border-[rgba(16,185,129,0.2)]'
+                    }`}
+                  >
+                    <Move className="w-3.5 h-3.5 text-[#00F5A0]" />
+                    <span>{explodePct > 0 ? `Exploded: ${explodePct}%` : 'Exploded View'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowMatingIndicators((prev) => !prev)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold flex items-center gap-1.5 transition-all cursor-pointer border ${
+                      showMatingIndicators
+                        ? 'bg-[#102B21] text-[#00F5A0] border-[#00F5A0]/50 shadow-[0_0_10px_rgba(0,245,160,0.2)]'
+                        : 'bg-[#071510] text-[#8CA89E] border-[rgba(16,185,129,0.2)]'
+                    }`}
+                  >
+                    <span
+                      className={`w-2 h-2 rounded-full ${
+                        showMatingIndicators ? 'bg-[#00F5A0] animate-pulse' : 'bg-gray-500'
+                      }`}
+                    />
+                    <span>{showMatingIndicators ? 'Mating Spheres: ON' : 'Mating Spheres: OFF'}</span>
+                  </button>
+
+                  {solved.smartSuggestions.some((s) => !s.isApplied) && (
+                    <button
+                      type="button"
+                      onClick={handleApplyAllSuggestions}
+                      className="px-3 py-1.5 rounded-lg bg-[#00F5A0] hover:bg-[#34EEA9] text-[#030A07] font-mono text-xs font-bold transition-all shadow-[0_0_15px_rgba(0,245,160,0.3)] flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Check className="w-3.5 h-3.5" />
+                      <span>Apply All ({solved.smartSuggestions.filter((s) => !s.isApplied).length})</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Main Grid: 3D Preview (Left) + Suggestions List (Right) */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+                {/* 3D Interactive Canvas with Mating Points Spheres */}
+                <div className="lg:col-span-7 flex flex-col gap-2">
+                  <div className="flex items-center justify-between text-xs font-mono">
+                    <span className="text-[#8CA89E] font-bold uppercase tracking-wider flex items-center gap-1.5">
+                      <Target className="w-3.5 h-3.5 text-[#00F5A0]" />
+                      <span>3D Mating Points & Alignment Guide</span>
+                    </span>
+                    {highlightedMateId && (
+                      <button
+                        type="button"
+                        onClick={() => setHighlightedMateId(null)}
+                        className="text-[10px] text-[#8CA89E] hover:text-[#00F5A0] underline cursor-pointer"
+                      >
+                        Clear Highlight
+                      </button>
+                    )}
+                  </div>
+
+                  <div className={`h-[360px] sm:h-[420px] w-full assembly-model-group-wrapper ${explodePct > 0 ? 'exploded-active' : 'exploded-compact'}`}>
+                    <AssemblyPreview3D
+                      solved={solved}
+                      showMatingIndicators={showMatingIndicators}
+                      highlightedMateId={highlightedMateId}
+                    />
+                  </div>
+                </div>
+
+                {/* Suggested Mating Interfaces Feed */}
+                <div className="lg:col-span-5 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-mono font-bold uppercase tracking-wider text-[#8CA89E]">
+                      Suggested Mating Points ({solved.smartSuggestions.length})
+                    </span>
+                    <span className="text-[10px] font-mono text-[#00F5A0]">
+                      {solved.smartSuggestions.filter((s) => s.isApplied).length} Applied
+                    </span>
+                  </div>
+
+                  <div className="space-y-2.5 max-h-[420px] overflow-y-auto pr-1">
+                    {solved.smartSuggestions.map((sugg) => {
+                      const colorHex = getMateColor(sugg.type);
+                      const isHighlighted = highlightedMateId === sugg.id;
+                      const compA = components.find((c) => c.id === sugg.componentIdA);
+                      const compB = components.find((c) => c.id === sugg.componentIdB);
+
+                      return (
+                        <div
+                          key={sugg.id}
+                          className={`p-3 rounded-xl border transition-all ${
+                            isHighlighted
+                              ? 'bg-[#102B21] border-[#00F5A0] shadow-[0_0_15px_rgba(0,245,160,0.25)]'
+                              : 'bg-[#071510] border-[rgba(16,185,129,0.2)] hover:border-[rgba(16,185,129,0.4)]'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex items-center gap-2">
+                              {/* Color-Coded Indicator Sphere Swatch */}
+                              <span
+                                className="w-3 h-3 rounded-full shrink-0 shadow-[0_0_8px_currentColor]"
+                                style={{ backgroundColor: colorHex, color: colorHex }}
+                              />
+                              <div>
+                                <span className="font-mono font-bold text-xs text-[#F0FDF4] block">
+                                  {sugg.name}
+                                </span>
+                                <span
+                                  className="text-[10px] font-mono uppercase font-bold"
+                                  style={{ color: colorHex }}
+                                >
+                                  {sugg.type} Mate • {sugg.alignmentReason}
+                                </span>
+                              </div>
+                            </div>
+
+                            <span className="px-1.5 py-0.5 rounded bg-[#00F5A0]/15 text-[#00F5A0] border border-[#00F5A0]/30 text-[9px] font-mono font-bold shrink-0">
+                              {Math.round(sugg.confidence * 100)}% Match
+                            </span>
+                          </div>
+
+                          <p className="text-[11px] text-[#8CA89E] mt-2 font-sans leading-relaxed">
+                            {sugg.description}
+                          </p>
+
+                          {/* Mating Point Coordinates */}
+                          <div className="mt-2.5 p-2 rounded-lg bg-[#030A07] border border-[rgba(16,185,129,0.15)] text-[10px] font-mono space-y-1">
+                            <div className="flex items-center justify-between text-[#8CA89E]">
+                              <span className="truncate">
+                                Pt A ({compA?.name || 'Part A'}):
+                              </span>
+                              <span className="text-[#00F5A0] font-bold shrink-0">
+                                [{sugg.matingPointA.position.map((v) => v.toFixed(0)).join(', ')}]
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between text-[#8CA89E]">
+                              <span className="truncate">
+                                Pt B ({compB?.name || 'Part B'}):
+                              </span>
+                              <span className="text-[#00F5A0] font-bold shrink-0">
+                                [{sugg.matingPointB.position.map((v) => v.toFixed(0)).join(', ')}]
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Action Buttons */}
+                          <div className="mt-2.5 flex items-center justify-between gap-2">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setHighlightedMateId((prev) => (prev === sugg.id ? null : sugg.id))
+                              }
+                              className={`px-2.5 py-1 rounded text-[10px] font-mono transition-all cursor-pointer ${
+                                isHighlighted
+                                  ? 'bg-[#00F5A0] text-[#030A07] font-bold'
+                                  : 'bg-[#102B21] text-[#8CA89E] hover:text-[#00F5A0]'
+                              }`}
+                            >
+                              {isHighlighted ? 'Highlighted' : 'Focus Spheres in 3D'}
+                            </button>
+
+                            {sugg.isApplied ? (
+                              <span className="text-[10px] font-mono text-[#00F5A0] flex items-center gap-1 font-bold">
+                                <CheckCircle2 className="w-3.5 h-3.5" />
+                                <span>Constraint Active</span>
+                              </span>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => handleApplySuggestedMate(sugg)}
+                                className="px-3 py-1 rounded bg-[#00F5A0] hover:bg-[#34EEA9] text-[#030A07] text-[10px] font-mono font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                              >
+                                <Plus className="w-3 h-3" />
+                                <span>Apply Mate</span>
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {activeTab === 'components' && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
@@ -481,40 +803,97 @@ export const AssemblyModal: React.FC<AssemblyModalProps> = ({
                 </div>
               </div>
 
-              {/* Mates List */}
+              {/* Mates List with Color Indicators & Mating Points */}
               <div className="space-y-2">
-                {constraints.map((mate) => (
-                  <div
-                    key={mate.id}
-                    className="p-3 rounded-xl bg-[#071510] border border-[rgba(16,185,129,0.2)] flex items-center justify-between gap-3"
-                  >
-                    <div className="flex items-center gap-3">
-                      <CheckCircle2 className="w-4 h-4 text-[#00F5A0] shrink-0" />
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono font-bold text-xs uppercase text-[#00F5A0]">
-                            {mate.type}
-                          </span>
-                          <span className="text-xs font-sans text-[#F0FDF4]">{mate.description}</span>
+                <div className="flex items-center justify-between text-xs font-mono text-[#8CA89E]">
+                  <span>Active Constraints ({constraints.length})</span>
+                  <div className="flex items-center gap-3 text-[10px]">
+                    <span className="flex items-center gap-1">
+                      <span className="w-2 h-2 rounded-full bg-[#00F5A0]" /> Concentric
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <span className="w-2 h-2 rounded-full bg-[#F59E0B]" /> Coincident
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <span className="w-2 h-2 rounded-full bg-[#8B5CF6]" /> Distance
+                    </span>
+                  </div>
+                </div>
+
+                {constraints.map((mate) => {
+                  const mateColor = getMateColor(mate.type);
+                  const isHighlighted = highlightedMateId === mate.id;
+                  const pts = solved.matingPoints.filter((p) => p.mateId === mate.id);
+
+                  return (
+                    <div
+                      key={mate.id}
+                      className={`p-3 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all ${
+                        isHighlighted
+                          ? 'bg-[#102B21] border-[#00F5A0] shadow-[0_0_12px_rgba(0,245,160,0.2)]'
+                          : 'bg-[#071510] border-[rgba(16,185,129,0.2)]'
+                      }`}
+                    >
+                      <div className="flex items-start sm:items-center gap-3 min-w-0">
+                        {/* Color-Coded Sphere Indicator Dot */}
+                        <span
+                          className="w-3.5 h-3.5 rounded-full shrink-0 mt-0.5 sm:mt-0 shadow-[0_0_8px_currentColor]"
+                          style={{ backgroundColor: mateColor, color: mateColor }}
+                          title={`Color indicator for ${mate.type} constraint`}
+                        />
+
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span
+                              className="font-mono font-bold text-xs uppercase"
+                              style={{ color: mateColor }}
+                            >
+                              {mate.type}
+                            </span>
+                            <span className="text-xs font-sans text-[#F0FDF4] truncate">
+                              {mate.description}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-3 mt-0.5 text-[10px] font-mono text-[#8CA89E] flex-wrap">
+                            {mate.value !== undefined && mate.value !== 0 && (
+                              <span>Offset: {mate.value} mm</span>
+                            )}
+                            {pts.length >= 2 && (
+                              <span className="text-[#00F5A0]">
+                                Mating Points: [{pts[0].position.map((v) => v.toFixed(0)).join(', ')}] ↔ [{pts[1].position.map((v) => v.toFixed(0)).join(', ')}]
+                              </span>
+                            )}
+                          </div>
                         </div>
-                        {mate.value !== undefined && mate.value !== 0 && (
-                          <span className="text-[11px] font-mono text-[#8CA89E]">
-                            Offset Parameter: {mate.value} mm
-                          </span>
-                        )}
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setHighlightedMateId((prev) => (prev === mate.id ? null : mate.id))
+                          }
+                          className={`px-2 py-1 rounded text-[10px] font-mono transition-all cursor-pointer ${
+                            isHighlighted
+                              ? 'bg-[#00F5A0] text-[#030A07] font-bold'
+                              : 'bg-[#102B21] text-[#8CA89E] hover:text-[#00F5A0]'
+                          }`}
+                        >
+                          {isHighlighted ? 'Highlighted' : 'Focus Spheres'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteMate(mate.id)}
+                          className="p-1.5 rounded-lg text-red-400 hover:bg-red-500/15 transition-all cursor-pointer"
+                          title="Remove mate"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </div>
                     </div>
-
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteMate(mate.id)}
-                      className="p-1.5 rounded-lg text-red-400 hover:bg-red-500/15 transition-all cursor-pointer"
-                      title="Remove mate"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
@@ -754,28 +1133,40 @@ export const AssemblyModal: React.FC<AssemblyModalProps> = ({
         </div>
 
         {/* Footer Actions */}
-        <div className="px-6 py-4 bg-[#071510] border-t border-[rgba(16,185,129,0.2)] flex items-center justify-between shrink-0">
-          <div className="text-xs font-mono text-[#8CA89E]">
-            Status:{' '}
-            <span className="text-[#00F5A0] font-bold">
-              {components.length} Components | {constraints.length} Constraints Active
-            </span>
+        <div className="px-4 sm:px-6 py-3 sm:py-4 bg-[#071510] border-t border-[rgba(16,185,129,0.2)] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shrink-0">
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="text-[11px] sm:text-xs font-mono text-[#8CA89E] truncate">
+              Status:{' '}
+              <span className="text-[#00F5A0] font-bold">
+                {components.length} Components | {constraints.length} Constraints Active
+              </span>
+            </div>
+
+            <label className="flex items-center gap-2 cursor-pointer select-none text-[11px] font-mono text-[#8CA89E] hover:text-[#00F5A0] transition-colors">
+              <input
+                type="checkbox"
+                checked={showMatingIndicators}
+                onChange={(e) => setShowMatingIndicators(e.target.checked)}
+                className="w-3.5 h-3.5 accent-[#00F5A0] rounded cursor-pointer"
+              />
+              <span>Render Mating Spheres in Main CAD Scene</span>
+            </label>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-xl bg-[#0B1E17] hover:bg-[#102B21] text-[#8CA89E] font-mono text-xs font-bold transition-all cursor-pointer"
+              className="flex-1 sm:flex-none px-4 py-2.5 min-h-[42px] rounded-xl bg-[#0B1E17] hover:bg-[#102B21] text-[#8CA89E] hover:text-[#F0FDF4] font-mono text-xs font-bold transition-all cursor-pointer text-center"
             >
               Close
             </button>
             <button
               type="button"
               onClick={handleApplyToScene}
-              className="px-5 py-2 rounded-xl bg-[#00F5A0] hover:bg-[#34EEA9] text-[#030A07] font-mono text-xs font-bold uppercase tracking-wider transition-all shadow-[0_0_20px_rgba(0,245,160,0.3)] cursor-pointer"
+              className="flex-2 sm:flex-none px-5 py-2.5 min-h-[42px] rounded-xl bg-[#00F5A0] hover:bg-[#34EEA9] text-[#030A07] font-mono text-xs font-bold uppercase tracking-wider transition-all shadow-[0_0_20px_rgba(0,245,160,0.3)] cursor-pointer text-center"
             >
-              Update Assembly in 3D Viewer
+              Update in 3D Viewer
             </button>
           </div>
         </div>

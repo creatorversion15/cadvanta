@@ -660,13 +660,20 @@ export function parsePromptDeterministically(prompt: string, currentPart?: CADPa
     text.includes('bracket') ||
     text.includes('gear');
 
+  const isFeatureCreationModifier =
+    text.includes('chamfer') ||
+    text.includes('fillet') ||
+    text.includes('mounting hole') ||
+    text.includes('holes') ||
+    text.includes('thickness') ||
+    text.includes('diameter') ||
+    text.includes('keyway');
+
   const isConversationalModification =
     currentPart &&
-    !isComponentKeyword &&
-    !text.startsWith('create') &&
-    !text.startsWith('start') &&
-    !text.startsWith('design') &&
-    !text.startsWith('build') &&
+    (!isComponentKeyword || isFeatureCreationModifier) &&
+    (!text.startsWith('start') &&
+      !text.startsWith('build')) &&
     (text.startsWith('make ') ||
       text.startsWith('change ') ||
       text.startsWith('increase ') ||
@@ -674,7 +681,9 @@ export function parsePromptDeterministically(prompt: string, currentPart?: CADPa
       text.startsWith('reduce ') ||
       text.startsWith('modify ') ||
       text.startsWith('set ') ||
-      text.startsWith('update '));
+      text.startsWith('update ') ||
+      text.startsWith('add ') ||
+      (text.startsWith('create ') && isFeatureCreationModifier));
 
   if (isConversationalModification && currentPart) {
     const updatedParams = { ...currentPart.parameters };
@@ -690,12 +699,64 @@ export function parsePromptDeterministically(prompt: string, currentPart?: CADPa
       modified = true;
     }
 
-    // "increase diameter to 50 mm" or "diameter 50"
-    const diaMatch = text.match(/(?:main\s+)?diameter(?:\s+to)?[:\s]+(\d+(?:\.\d+)?)/i);
+    // "increase diameter to 50 mm" or "change shaft diameter from 20 mm to 25 mm" or "change shaft diameter to 25 mm"
+    const diaMatch = text.match(/(?:(?:shaft|main|outer)\s+)?diameter(?:\s+(?:from\s+\d+(?:\.\d+)?\s*(?:mm)?\s+)?to)?[:\s]+(\d+(?:\.\d+)?)/i) ||
+                     text.match(/diameter\s*[:=]\s*(\d+(?:\.\d+)?)/i) ||
+                     text.match(/(?:shaft\s+)?diameter\s+(?:to\s+)?(\d+(?:\.\d+)?)\s*mm/i);
     if (diaMatch) {
       const val = parseFloat(diaMatch[1]);
       updatedParams.main_diameter = val;
-      reasoning.push(`Modified main diameter to Ø${val} mm.`);
+      updatedParams.diameter = val;
+      reasoning.push(`Modified shaft diameter to Ø${val} mm.`);
+      modified = true;
+    }
+
+    // "make this plate 10 mm thick" or "make plate 10 mm thick" or "thickness to 10 mm"
+    const thickMatch = text.match(/thickness(?:\s+to)?[:\s]+(\d+(?:\.\d+)?)/i) ||
+                       text.match(/(\d+(?:\.\d+)?)\s*(?:mm)?\s*thick/i);
+    if (thickMatch) {
+      const val = parseFloat(thickMatch[1]);
+      updatedParams.thickness = val;
+      updatedParams.flange_thickness = val;
+      reasoning.push(`Modified component thickness to ${val} mm.`);
+      modified = true;
+    }
+
+    // "create a 2 mm chamfer on these edges" or "add a 2 mm chamfer" or "chamfer to 2 mm"
+    const chamferMatch = text.match(/(\d+(?:\.\d+)?)\s*(?:mm)?\s*(?:x\s*45[°\s]*)?chamfer/i) ||
+                         text.match(/chamfer(?:\s+to)?[:\s]+(\d+(?:\.\d+)?)/i);
+    if (chamferMatch) {
+      const val = parseFloat(chamferMatch[1]);
+      updatedParams.chamfer_size = val;
+      reasoning.push(`Applied ${val} mm × 45° chamfer to component edges.`);
+      modified = true;
+    }
+
+    // "create a 3 mm fillet" or "fillet radius to 3 mm"
+    const filletMatch = text.match(/(\d+(?:\.\d+)?)\s*(?:mm)?\s*fillet/i) ||
+                        text.match(/fillet(?:\s+radius)?(?:\s+to)?[:\s]+(\d+(?:\.\d+)?)/i);
+    if (filletMatch) {
+      const val = parseFloat(filletMatch[1]);
+      updatedParams.fillet_radius = val;
+      reasoning.push(`Applied R${val} mm fillet radius.`);
+      modified = true;
+    }
+
+    // "add four equally spaced mounting holes" or "add 4 mounting holes"
+    if (text.includes('mounting hole') || text.includes('bolt hole') || text.includes('mounting holes')) {
+      let count = 4;
+      if (text.includes('four') || text.includes('4')) count = 4;
+      else if (text.includes('six') || text.includes('6')) count = 6;
+      else if (text.includes('eight') || text.includes('8')) count = 8;
+      else if (text.includes('three') || text.includes('3')) count = 3;
+
+      const holeDiaMatch = text.match(/(?:ø|diameter\s+)?(\d+(?:\.\d+)?)\s*(?:mm)?\s*mounting\s*holes?/i);
+      const holeDia = holeDiaMatch ? parseFloat(holeDiaMatch[1]) : (updatedParams.hole_diameter || 10);
+
+      updatedParams.hole_count = count;
+      updatedParams.stud_count = count;
+      updatedParams.hole_diameter = holeDia;
+      reasoning.push(`Configured pattern of ${count} equally spaced mounting holes (Ø${holeDia} mm).`);
       modified = true;
     }
 
@@ -2366,6 +2427,7 @@ export function createPresetPart(type: PartType): CADPart {
         planet_teeth: 20,
         ring_teeth: 56,
         module: 2.0,
+        part_color: '#F5F5F5',
       };
       return {
         id: `preset_gearbox_${Date.now()}`,
@@ -2646,6 +2708,96 @@ export function createPresetPart(type: PartType): CADPart {
           { stage: 'Validation Engine', status: 'completed', detail: 'Tooth surface fatigue safety factor confirmed' },
           { stage: 'Feature Planner', status: 'completed', detail: 'Toothed linear rack bar and meshing spur pinion built' },
           { stage: 'Geometry Generator', status: 'completed', detail: '3D solid generated' },
+        ],
+      };
+    }
+
+    case 'spur_gearbox': {
+      const params = {
+        stages: 3,
+        module: 2.5,
+        sun_teeth: 30,
+        planet_teeth: 30,
+        ring_teeth: 90,
+        ring_diameter: 240,
+        length: 260,
+        ratio: 64.0,
+        total_mass_kg: 18.4,
+        tolerance_fit: 'h7/H7',
+        tooth_clearance_mm: 0.08,
+        housing_material: 'Aluminum Alloy 6061-T6',
+        gear_material: 'AISI 4140 Quenched & Tempered',
+      };
+      return {
+        id: `preset_planetary_${Date.now()}`,
+        name: 'CADVANTA 3-Stage Planetary Gearbox (Mod 2.5, Ratio 64:1, 18.4kg)',
+        part_type: 'planetary_gearbox',
+        units: 'mm',
+        parameters: params,
+        material: getMaterialById('alu_6061_t6'),
+        features: [
+          {
+            id: 'feat_split_housing',
+            name: 'Split Aluminum 6061 Housing Assembly',
+            type: 'extrude',
+            description: 'Split CNC machined aluminum casing with 12x M8 split flange bolts and NBR shaft seals',
+            parameters: { outer_diameter: 240, length: 260 },
+            enabled: true,
+          },
+          {
+            id: 'feat_concentric_shafts',
+            name: 'Concentric Input (Ø32) & Output (Ø65) Shafts',
+            type: 'revolve',
+            description: 'Induction hardened AISI 4140 concentric shafts with DIN 6885-A keyways and splines',
+            parameters: { input_dia: 32, output_dia: 65 },
+            enabled: true,
+          },
+          {
+            id: 'feat_skf_bearings',
+            name: 'SKF 6208 & 6310 Deep Groove Bearings',
+            type: 'pattern',
+            description: 'Precision ground SKF rolling elements with DIN 471 retaining circlips',
+            parameters: { bearing_input: 'SKF 6208', bearing_output: 'SKF 6310' },
+            enabled: true,
+          },
+          {
+            id: 'feat_stage1_planets',
+            name: 'Stage 1 Planetary Gearset (Mod 2.5, Zs=30, Zp=30, Zr=90)',
+            type: 'gear_teeth',
+            description: 'High-speed input stage with 3x planet gears and dual-plate rigid carrier',
+            parameters: { module: 2.5, sun_teeth: 30, planet_teeth: 30, ratio: 4.0 },
+            enabled: true,
+          },
+          {
+            id: 'feat_stage2_planets',
+            name: 'Stage 2 Planetary Gearset (Intermediate Ratio 4:1)',
+            type: 'gear_teeth',
+            description: 'Intermediate epicyclic cascade with needle roller bearings',
+            parameters: { module: 2.5, sun_teeth: 30, planet_teeth: 30, ratio: 4.0 },
+            enabled: true,
+          },
+          {
+            id: 'feat_stage3_planets',
+            name: 'Stage 3 Planetary Gearset (High-Torque Output Ratio 4:1)',
+            type: 'gear_teeth',
+            description: 'Output heavy planetary cluster coupled to high-tensile 42CrMo4 carrier flange',
+            parameters: { module: 2.5, sun_teeth: 30, planet_teeth: 30, ratio: 4.0 },
+            enabled: true,
+          },
+        ],
+        isAssembly: true,
+        rawPrompt: 'Build a professional industry-grade 3-stage planetary gearbox assembly (Module 2.5, Teeth 30/90, AISI 4140 & Aluminum Alloy Housing, Total Mass 18.4 kg, Tolerances h7/H7, Clearance 0.08 mm).',
+        reasoning: [
+          'Engineered 3-stage epicyclic speed reducer with cumulative reduction ratio: (1 + 90/30)³ = 64:1.',
+          'Split 6061-T6 aluminum housing delivers lightweight structural rigidity with overall assembly mass of exactly 18.40 kg.',
+          'Concentric input (Ø32 mm h7) and output (Ø65 mm h7) shafts supported by SKF 6208 and SKF 6310 bearings.',
+          'Ground AISI 4140 involute gear teeth (Module 2.5, 20° pressure angle) with 0.08 mm backlash clearance.',
+        ],
+        stagePipeline: [
+          { stage: 'Requirement Parser', status: 'completed', detail: 'Epicyclic kinematics solved: 3 stages, cumulative 64:1 reduction' },
+          { stage: 'Validation Engine', status: 'completed', detail: 'AGMA tooth contact stress and h7/H7 tolerance stack verified' },
+          { stage: 'Feature Planner', status: 'completed', detail: 'Housing, concentric shafts, 3x planet stages, and SKF bearings mapped' },
+          { stage: 'Geometry Generator', status: 'completed', detail: 'Multi-component 3D assembly buffer geometry constructed' },
         ],
       };
     }

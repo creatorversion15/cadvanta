@@ -12,7 +12,15 @@ import {
   Zap,
   Bot,
   Lock,
+  Wand2,
+  Sliders,
+  FileQuestion,
+  TrendingDown,
+  CornerDownLeft,
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+
+export type AIActionMode = 'generate' | 'modify' | 'explain' | 'optimize';
 
 interface AICommandProps {
   part: CADPart;
@@ -37,182 +45,206 @@ export const AICommand: React.FC<AICommandProps> = ({
 }) => {
   const [inputPrompt, setInputPrompt] = useState<string>('');
   const [showReasoning, setShowReasoning] = useState<boolean>(false);
+  const [activeMode, setActiveMode] = useState<AIActionMode>('generate');
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (isViewOnly) {
       if (onForkProject) onForkProject();
       return;
     }
     if (!inputPrompt.trim() || isLoading) return;
-    onExecuteCommand(inputPrompt);
+
+    let fullPrompt = inputPrompt.trim();
+    if (activeMode === 'explain' && !fullPrompt.toLowerCase().startsWith('explain')) {
+      fullPrompt = `Explain mechanical design and engineering properties: ${fullPrompt}`;
+    } else if (activeMode === 'optimize' && !fullPrompt.toLowerCase().startsWith('optimize')) {
+      fullPrompt = `Optimize mass and stress: ${fullPrompt}`;
+    }
+
+    onExecuteCommand(fullPrompt);
     setInputPrompt('');
   };
 
-  // Quick action suggestions based on current part type
-  const getSuggestions = () => {
-    switch (part.part_type) {
-      case 'shaft':
-        return [
-          'Make total length 250 mm',
-          'Increase main diameter to 40 mm',
-          'Add 10 mm DIN keyway',
-          'Set step 1 diameter to 25 mm',
-          'Switch material to Stainless 316',
-        ];
-      case 'flange':
-        return [
-          'Change to 8 bolt holes',
-          'Increase outer diameter to 150 mm',
-          'Set inner bore to 60 mm',
-          'Add 25 mm hub collar',
-          'Switch to Aluminium 6061-T6',
-        ];
-      case 'bracket':
-        return [
-          'Increase wall thickness to 10 mm',
-          'Make height 120 mm',
-          'Set hole diameter to 12 mm',
-          'Add 8 mm bend radius',
-        ];
-      case 'planetary_gearbox':
-        return [
-          'Set gear ratio to 20:1',
-          'Change module to 2.5 mm',
-          'Switch to EN19 Alloy Steel',
-          'Increase ring diameter to 140 mm',
-        ];
-      case 'gear':
-        return [
-          'Increase tooth count to 32',
-          'Change module to 3.0 mm',
-          'Set face width to 30 mm',
-        ];
-      default:
-        return [
-          'Increase diameter to 60 mm',
-          'Make height 150 mm',
-          'Add 30 mm inner bore',
-          'Add 5 mm chamfer',
-        ];
+  const handleModeChange = (mode: AIActionMode) => {
+    setActiveMode(mode);
+    if (mode === 'optimize') {
+      setInputPrompt(`Optimize ${part.name} for minimal mass while maintaining factor of safety > 2.0`);
+    } else if (mode === 'explain') {
+      setInputPrompt(`Explain stress concentrations, critical sections, and load paths for ${part.name}`);
+    }
+  };
+
+  const handleLoadExample = () => {
+    setActiveMode('generate');
+    setInputPrompt(
+      'Create a stepped shaft, 200 mm long, main diameter 120 mm, step diameter 20 mm × 50 mm, with a 10 × 6 mm keyway.'
+    );
+  };
+
+  const getPlaceholder = () => {
+    if (isViewOnly) {
+      return "🔒 View-Only Mode: Design prompt is locked. Click 'Edit Copy' to modify.";
+    }
+    switch (activeMode) {
+      case 'generate':
+        return "Describe geometry... e.g. 'Create a stepped shaft, 200 mm long, main diameter 120 mm, step diameter 20 mm × 50 mm, with a 10 × 6 mm keyway.'";
+      case 'modify':
+        return `Modify ${part.name}... e.g. 'Make length 250 mm', 'Increase diameter to 60 mm', 'Add 8 mm keyway'`;
+      case 'explain':
+        return `Ask about ${part.name}... e.g. 'Explain torsional stress capacity', 'Check fatigue notch sensitivity'`;
+      case 'optimize':
+        return `Optimize ${part.name}... e.g. 'Reduce weight by 20%', 'Hollow core bore', 'Add stress relief fillets'`;
     }
   };
 
   return (
-    <div className="w-full bg-[#11171C] rounded-lg border border-[rgba(160,180,190,0.15)] p-3 space-y-2.5 shadow-xl text-[#F2F5F6]">
-      {/* Clarification Alert Box if required */}
-      {clarificationRequired && clarificationQuestion && (
-        <div className="p-3 bg-[#161D22] border border-[#00D9FF]/40 rounded-lg flex items-start gap-3 text-xs animate-in fade-in slide-in-from-top-1">
-          <HelpCircle className="w-4 h-4 text-[#00D9FF] shrink-0 mt-0.5" />
-          <div className="space-y-2 flex-1">
-            <div className="font-bold text-[#F2F5F6] font-mono">
-              Engineering Clarification Required:
+    <div className="w-full bg-white rounded-lg border border-[#CBD5E1] p-2.5 sm:p-3 space-y-2 text-[#0F172A] shadow-md shrink-0 select-none">
+      <AnimatePresence>
+        {/* Clarification Alert Box if required */}
+        {clarificationRequired && clarificationQuestion && (
+          <motion.div
+            initial={{ opacity: 0, height: 0, scale: 0.95 }}
+            animate={{ opacity: 1, height: 'auto', scale: 1 }}
+            exit={{ opacity: 0, height: 0, scale: 0.95 }}
+            className="p-3 bg-[#F8FAFC] border border-[#059669]/40 rounded flex items-start gap-3 text-xs overflow-hidden shadow-xs"
+          >
+            <HelpCircle className="w-4 h-4 text-[#059669] shrink-0 mt-0.5" />
+            <div className="space-y-2 flex-1">
+              <div className="font-bold text-[#0F172A] font-mono">
+                Engineering Clarification Required:
+              </div>
+              <p className="text-[#475569] leading-relaxed font-sans">{clarificationQuestion}</p>
+              <div className="flex flex-wrap gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() =>
+                    onExecuteCommand(
+                      'Design an L-shaped NEMA 17 motor bracket 42 mm wide, 60 mm high, 4 mm thick with 4x 3.5 mm mounting holes and center pilot hole.'
+                    )
+                  }
+                  className="px-2.5 py-1.5 bg-white text-[#059669] hover:bg-[#059669] hover:text-white border border-[#CBD5E1] font-bold rounded text-[11px] font-mono transition-all cursor-pointer min-h-[32px] flex items-center"
+                >
+                  Use NEMA 17 Standard Mount
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    onExecuteCommand(
+                      'Design an L-shaped NEMA 23 motor bracket 60 mm wide, 80 mm high, 6 mm thick with 4x 5 mm mounting holes and 40 mm center pilot.'
+                    )
+                  }
+                  className="px-2.5 py-1.5 bg-white text-[#059669] hover:bg-[#059669] hover:text-white border border-[#CBD5E1] font-bold rounded text-[11px] font-mono transition-all cursor-pointer min-h-[32px] flex items-center"
+                >
+                  Use NEMA 23 Standard Mount
+                </button>
+              </div>
             </div>
-            <p className="text-[#AAB6BC] leading-relaxed font-sans">{clarificationQuestion}</p>
-            <div className="flex flex-wrap gap-2 pt-1">
-              <button
-                id="btn-clarify-nema17"
-                onClick={() =>
-                  onExecuteCommand(
-                    'Design an L-shaped NEMA 17 motor bracket 42 mm wide, 60 mm high, 4 mm thick with 4x 3.5 mm mounting holes and center pilot hole.'
-                  )
-                }
-                className="px-2.5 py-1 bg-[#1C252B] text-[#00D9FF] hover:bg-[#00D9FF] hover:text-[#0B0F12] border border-[#00D9FF]/30 font-bold rounded text-[11px] font-mono transition-all shadow-xs"
-              >
-                Use NEMA 17 Standard Mount
-              </button>
-              <button
-                id="btn-clarify-nema23"
-                onClick={() =>
-                  onExecuteCommand(
-                    'Design an L-shaped NEMA 23 motor bracket 60 mm wide, 80 mm high, 6 mm thick with 4x 5 mm mounting holes and 40 mm center pilot.'
-                  )
-                }
-                className="px-2.5 py-1 bg-[#1C252B] text-[#00D9FF] hover:bg-[#00D9FF] hover:text-[#0B0F12] border border-[#00D9FF]/30 font-bold rounded text-[11px] font-mono transition-all shadow-xs"
-              >
-                Use NEMA 23 Standard Mount
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {/* Top Bar: Pipeline Status & Reasoning Dropdown */}
-      <div className="flex items-center justify-between text-xs font-mono">
-        <div className="flex items-center gap-2 text-[#AAB6BC]">
-          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-[#161D22] border border-[rgba(160,180,190,0.15)] text-[10px] text-[#00D9FF] font-bold uppercase tracking-wider">
-            <Terminal className="w-3 h-3 text-[#00D9FF]" />
-            <span>CAD Interpreter</span>
-          </div>
-          {part.stagePipeline && (
-            <div className="hidden sm:flex items-center gap-1.5 text-[11px] text-[#8B9AA3] font-medium">
-              <CheckCircle2 className="w-3.5 h-3.5 text-[#00D9FF]" />
-              <span>Pipeline: Parser → Validate → Feature Plan → 3D Mesh</span>
-            </div>
-          )}
-        </div>
-
-        <div className="flex items-center gap-3">
-          {onOpenViraBot && (
+      {/* Top Header: 4 Action Modes (Generate, Modify, Explain, Optimize) + Status */}
+      <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
+        <div className="flex items-center gap-1 bg-[#F8FAFC] p-0.5 rounded border border-[#E2E8F0]">
+          {([
+            { id: 'generate', label: 'Generate', icon: Wand2 },
+            { id: 'modify', label: 'Modify', icon: Sliders },
+            { id: 'explain', label: 'Explain', icon: FileQuestion },
+            { id: 'optimize', label: 'Optimize', icon: TrendingDown },
+          ] as const).map(({ id, label, icon: Icon }) => (
             <button
-              onClick={onOpenViraBot}
-              className="flex items-center gap-1 text-[11px] text-[#00D9FF] hover:text-[#38E7FF] hover:underline font-mono font-bold"
+              key={id}
+              type="button"
+              onClick={() => handleModeChange(id)}
+              className={`px-2.5 py-1 rounded text-[11px] font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
+                activeMode === id
+                  ? 'bg-[#059669] text-white shadow-xs'
+                  : 'text-[#475569] hover:text-[#0F172A] hover:bg-[#EDF2F7]'
+              }`}
             >
-              <Bot className="w-3.5 h-3.5 text-[#00D9FF]" />
-              <span>Ask VIRA</span>
+              <Icon className="w-3 h-3" />
+              <span>{label}</span>
             </button>
-          )}
+          ))}
+        </div>
+
+        <div className="flex items-center gap-2.5">
+          {/* Preset Example Quick Trigger */}
+          <button
+            type="button"
+            onClick={handleLoadExample}
+            className="text-[10px] text-[#059669] hover:underline font-mono cursor-pointer flex items-center gap-1 bg-[#F8FAFC] px-2 py-0.5 rounded border border-[#CBD5E1]"
+            title="Load: Stepped shaft 200 mm long, main Ø120, step Ø20x50, 10x6 keyway"
+          >
+            <Sparkles className="w-2.5 h-2.5" />
+            <span className="hidden md:inline">Example:</span> Stepped Shaft 200mm
+          </button>
 
           {part.reasoning && part.reasoning.length > 0 && (
             <button
-              id="btn-toggle-reasoning"
+              type="button"
               onClick={() => setShowReasoning(!showReasoning)}
-              className="flex items-center gap-1 text-[11px] text-[#8B9AA3] hover:text-[#F2F5F6] transition-colors"
+              className="flex items-center gap-1 text-[11px] text-[#64748B] hover:text-[#0F172A] transition-colors cursor-pointer"
             >
-              <span>Reasoning ({part.reasoning.length})</span>
+              <span>Log ({part.reasoning.length})</span>
               {showReasoning ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+            </button>
+          )}
+
+          {onOpenViraBot && (
+            <button
+              type="button"
+              onClick={onOpenViraBot}
+              className="flex items-center gap-1 text-[11px] text-[#059669] hover:underline font-mono font-bold cursor-pointer"
+            >
+              <Bot className="w-3.5 h-3.5" />
+              <span>Ask VIRA</span>
             </button>
           )}
         </div>
       </div>
 
       {/* Expandable Engineering Reasoning Panel */}
-      {showReasoning && part.reasoning && (
-        <div className="p-3 bg-[#161D22] rounded-lg border border-[rgba(160,180,190,0.15)] text-xs font-mono space-y-1.5 animate-in fade-in">
-          <div className="text-[10px] font-bold text-[#00D9FF] uppercase tracking-widest mb-1">
-            CADVANTA Geometric Reasoning:
-          </div>
-          {part.reasoning.map((r, i) => (
-            <div key={i} className="flex items-start gap-2 text-[#AAB6BC]">
-              <span className="text-[#00D9FF] font-bold">•</span>
-              <span className="leading-relaxed font-sans">{r}</span>
+      <AnimatePresence>
+        {showReasoning && part.reasoning && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="p-3 bg-[#F8FAFC] rounded border border-[#E2E8F0] text-xs font-mono space-y-1 overflow-hidden"
+          >
+            <div className="text-[10px] font-bold text-[#059669] uppercase tracking-widest mb-1">
+              Geometric Reasoning & CAD Action Pipeline:
             </div>
-          ))}
-        </div>
-      )}
+            {part.reasoning.map((r, i) => (
+              <div key={i} className="flex items-start gap-2 text-[#475569]">
+                <span className="text-[#059669] font-bold">•</span>
+                <span className="leading-relaxed font-sans">{r}</span>
+              </div>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Main Conversational Input Form */}
       <form onSubmit={handleSubmit} className="relative flex items-center gap-2">
-        <div className="relative flex-1">
+        <div className="relative flex-1 min-w-0">
           <input
             id="input-ai-command"
             type="text"
             value={inputPrompt}
             onChange={(e) => setInputPrompt(e.target.value)}
             disabled={isLoading || isViewOnly}
-            placeholder={
-              isViewOnly
-                ? "🔒 View-Only Mode: Design prompt input is locked. Click 'Edit Copy' to modify."
-                : "Modify design... (e.g. 'Make total length 250 mm', 'Add 8 mm keyway', 'Switch to IS 2062 Steel')"
-            }
-            className={`w-full bg-[#161D22] border border-[rgba(160,180,190,0.2)] rounded-lg px-3.5 py-2.5 text-xs sm:text-sm text-[#F2F5F6] placeholder:text-[#6F7C83] focus:outline-none focus:border-[#00D9FF] transition-all font-sans ${
+            placeholder={getPlaceholder()}
+            className={`w-full bg-[#F8FAFC] border border-[#CBD5E1] rounded px-3 py-2 text-xs text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:border-[#059669] transition-all font-mono min-h-[38px] ${
               isViewOnly ? 'opacity-70 cursor-not-allowed' : ''
             }`}
           />
           {isLoading && (
-            <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2 text-[#00D9FF] text-xs font-mono">
-              <Loader2 className="w-4 h-4 animate-spin text-[#00D9FF]" />
-              <span>Solving 3D CAD...</span>
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 text-[#059669] text-xs font-mono bg-white/90 px-2 py-0.5 rounded border border-[#E2E8F0] shadow-xs">
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-[#059669]" />
+              <span className="hidden sm:inline">Solving 3D CAD...</span>
             </div>
           )}
         </div>
@@ -222,9 +254,9 @@ export const AICommand: React.FC<AICommandProps> = ({
             id="btn-ai-view-only-fork"
             type="button"
             onClick={onForkProject}
-            className="px-4 py-2.5 bg-[#00F5A0] text-[#02140D] hover:bg-[#34EEA9] font-bold text-xs uppercase tracking-wider rounded-lg transition-all flex items-center gap-1.5 shadow-[0_0_12px_rgba(0,245,160,0.25)] active:scale-95 shrink-0 font-mono cursor-pointer"
+            className="px-3 py-2 min-h-[38px] bg-[#059669] text-white hover:bg-[#047857] font-bold text-xs uppercase tracking-wider rounded transition-all flex items-center gap-1.5 shrink-0 font-mono cursor-pointer shadow-xs"
           >
-            <Lock className="w-4 h-4" />
+            <Lock className="w-3.5 h-3.5" />
             <span>Edit Copy</span>
           </button>
         ) : (
@@ -232,32 +264,13 @@ export const AICommand: React.FC<AICommandProps> = ({
             id="btn-ai-generate"
             type="submit"
             disabled={!inputPrompt.trim() || isLoading}
-            className="px-4 py-2.5 bg-[#00D9FF] text-[#0B0F12] hover:bg-[#38E7FF] disabled:opacity-40 disabled:hover:bg-[#00D9FF] font-black text-xs uppercase tracking-wider rounded-lg transition-all flex items-center gap-1.5 shadow-[0_0_12px_rgba(0,217,255,0.2)] active:scale-95 shrink-0 font-mono"
+            className="px-3.5 py-2 min-h-[38px] bg-[#059669] hover:bg-[#047857] disabled:opacity-40 disabled:hover:bg-[#059669] text-white font-bold text-xs uppercase tracking-wider rounded transition-all flex items-center gap-1.5 shadow-xs shrink-0 font-mono cursor-pointer"
           >
-            <Sparkles className="w-4 h-4" />
-            <span>Execute</span>
+            <Sparkles className="w-3.5 h-3.5 shrink-0" />
+            <span>{activeMode === 'explain' ? 'Explain' : activeMode === 'optimize' ? 'Optimize' : 'Execute'}</span>
           </button>
         )}
       </form>
-
-      {/* Quick Suggestion Chips */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pt-0.5 text-xs no-scrollbar">
-        <span className="text-[10px] font-mono uppercase tracking-widest text-[#8B9AA3] flex items-center gap-1 shrink-0 font-bold">
-          <Zap className="w-3 h-3 text-[#00D9FF]" />
-          Quick:
-        </span>
-        {getSuggestions().map((sug, i) => (
-          <button
-            key={i}
-            id={`btn-suggestion-${i}`}
-            onClick={() => onExecuteCommand(sug)}
-            disabled={isLoading}
-            className="shrink-0 px-2.5 py-1 bg-[#161D22] hover:bg-[#1C252B] hover:border-[#00D9FF]/40 text-[#AAB6BC] hover:text-[#00D9FF] border border-[rgba(160,180,190,0.15)] rounded text-xs font-mono transition-all active:scale-95 shadow-xs"
-          >
-            {sug}
-          </button>
-        ))}
-      </div>
     </div>
   );
 };

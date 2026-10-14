@@ -22,13 +22,17 @@ import {
   HelpCircle,
   FileText,
 } from 'lucide-react';
-import { generateEngineeringChecksPDF } from '../../engine/pdfReportGenerator';
+import {
+  generateEngineeringChecksPDF,
+  generateEngineeringSummaryReportPDF,
+} from '../../engine/pdfReportGenerator';
 
 interface FEAModalProps {
   isOpen: boolean;
   onClose: () => void;
   part: CADPart;
   onApplyFEAModel?: (feaGroup: THREE.Group) => void;
+  onOpenSummaryModal?: () => void;
 }
 
 export const FEAModal: React.FC<FEAModalProps> = ({
@@ -36,6 +40,7 @@ export const FEAModal: React.FC<FEAModalProps> = ({
   onClose,
   part,
   onApplyFEAModel,
+  onOpenSummaryModal,
 }) => {
   const [loadForceN, setLoadForceN] = useState<number>(4500); // 4.5 kN
   const [loadDir, setLoadDir] = useState<LoadDirection>('Y');
@@ -340,12 +345,18 @@ export const FEAModal: React.FC<FEAModalProps> = ({
               <button
                 id="btn-generate-pdf-fea-modal"
                 type="button"
-                onClick={() => generateEngineeringChecksPDF(part)}
+                onClick={() => {
+                  generateEngineeringSummaryReportPDF(part, {
+                    feaResults: results,
+                    feaInputs,
+                    downloadImmediately: true,
+                  });
+                }}
                 className="flex-1 h-12 rounded-xl bg-[#0B1E17] hover:bg-[#102B21] border border-[rgba(16,185,129,0.3)] text-[#00F5A0] font-mono font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer shadow-xs active:scale-95"
-                title="Download formal Engineering Validation & DFM PDF Report"
+                title="Download formal 3-page Engineering Summary Report with FEA, Material Costs & DFM"
               >
                 <FileText className="w-4 h-4" />
-                <span>Generate PDF Summary</span>
+                <span>Formal PDF Summary</span>
               </button>
 
               <button

@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CADVANTA — AERIS Hybrid Turbine Mechanical Assembly & Telemetry</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Three.js & OrbitControls -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Plus Jakarta Sans', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            brand: {
+              cyan: '#00D9FF',
+              emerald: '#10B981',
+              rose: '#F43F5E',
+              amber: '#F59E0B',
+              slate: '#0B0F19',
+              panel: '#111827',
+              border: '#1E293B',
+              card: '#0F172A'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      background-color: #0B0F19;
+      color: #E2E8F0;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      overflow: hidden;
+    }
+    /* Custom Scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0B0F19;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1E293B;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #334155;
+    }
+    .terminal-glow {
+      text-shadow: 0 0 6px rgba(16, 185, 129, 0.4);
+    }
+    input[type=range] {
+      accent-color: #00D9FF;
+    }
+  </style>
+</head>
+<body class="h-screen w-screen flex flex-col antialiased select-none">
+
+  <!-- ========================================================================= -->
+  <!-- TOP HEADER / APPLICATION BAR                                              -->
+  <!-- ========================================================================= -->
+  <header class="h-12 border-b border-slate-800 bg-[#0E131F] px-4 flex items-center justify-between shrink-0 z-30">
+    <div class="flex items-center gap-3">
+      <div class="flex items-center gap-2">
+        <div class="w-7 h-7 rounded bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center text-black font-black text-sm shadow-md shadow-cyan-500/20">
+          C
+        </div>
+        <span class="font-extrabold text-base tracking-wider text-white">CADVANTA</span>
+      </div>
+      <div class="h-4 w-px bg-slate-700"></div>
+      <div class="flex items-center gap-2">
+        <span class="text-xs font-mono text-cyan-400 font-bold bg-cyan-950/60 border border-cyan-800/60 px-2 py-0.5 rounded">
+          AERIS v3.4
+        </span>
+        <span class="text-xs text-slate-400 hidden sm:inline font-mono">
+          Hybrid Wind/Solar Mechanical Assembly
+        </span>
+      </div>
+    </div>
+
+    <!-- Right Header Controls -->
+    <div class="flex items-center gap-2 text-xs font-mono">
+      <div class="hidden md:flex items-center gap-1.5 bg-slate-900 border border-slate-800 px-2.5 py-1 rounded text-slate-300">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span>BUS: CAN 2.0B</span>
+      </div>
+      <div class="hidden sm:flex items-center gap-1.5 bg-slate-900 border border-slate-800 px-2.5 py-1 rounded text-slate-300">
+        <span class="text-slate-500">FREQ:</span>
+        <span class="text-cyan-400 font-bold">100 Hz</span>
+      </div>
+      <button id="btn-export-code" class="px-2.5 py-1 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 text-cyan-300 rounded font-bold transition flex items-center gap-1 cursor-pointer">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+        <span>STANDALONE READY</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ========================================================================= -->
+  <!-- MAIN 3-COLUMN DESKTOP ENGINEERING LAYOUT                                 -->
+  <!-- ========================================================================= -->
+  <main class="flex-1 flex overflow-hidden relative">
+
+    <!-- ----------------------------------------------------------------------- -->
+    <!-- LEFT PANEL: ASSEMBLY CONTROLS                                           -->
+    <!-- ----------------------------------------------------------------------- -->
+    <aside class="w-72 sm:w-80 bg-[#111827] border-r border-slate-800 flex flex-col shrink-0 z-20 overflow-y-auto">
+      <!-- Section Title -->
+      <div class="p-3 border-b border-slate-800 flex items-center justify-between bg-slate-900/60">
+        <div class="flex items-center gap-2">
+          <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
+          <span class="text-xs font-bold font-mono tracking-wider text-slate-200 uppercase">Assembly Controls</span>
+        </div>
+        <span class="text-[10px] font-mono text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded">ONLINE</span>
+      </div>
+
+      <div class="p-3 space-y-4 flex-1">
+        <!-- Action Row: START & STOP -->
+        <div>
+          <label class="text-[11px] font-mono font-semibold text-slate-400 uppercase tracking-wider mb-1.5 block">
+            Turbine Prime Mover
+          </label>
+          <div class="grid grid-cols-2 gap-2">
+            <button id="btn-start" class="py-2 px-3 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-mono font-bold text-xs rounded border border-emerald-400/30 flex items-center justify-center gap-1.5 transition shadow-lg shadow-emerald-900/40 cursor-pointer">
+              <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+              <span>START</span>
+            </button>
+            <button id="btn-stop" class="py-2 px-3 bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white font-mono font-bold text-xs rounded border border-rose-500/40 flex items-center justify-center gap-1.5 transition cursor-pointer">
+              <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></svg>
+              <span>STOP</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Motor Speed Control (RPM) -->
+        <div class="bg-slate-900/90 border border-slate-800 p-3 rounded-lg space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-mono font-semibold text-slate-300">Rotor Speed</span>
+            <div class="flex items-baseline gap-1 font-mono">
+              <span id="txt-rpm" class="text-lg font-bold text-cyan-400">120.0</span>
+              <span class="text-[10px] text-slate-400">RPM</span>
+            </div>
+          </div>
+          <input id="slider-rpm" type="range" min="0" max="300" step="1" value="120" class="w-full h-1.5 bg-slate-800 rounded-lg cursor-pointer">
+          <div class="flex justify-between text-[10px] font-mono text-slate-500">
+            <span>0</span>
+            <span>75</span>
+            <span>150</span>
+            <span>225</span>
+            <span>300</span>
+          </div>
+        </div>
+
+        <!-- Interactive View & Inspection Toggles -->
+        <div class="space-y-2">
+          <span class="text-[11px] font-mono font-semibold text-slate-400 uppercase tracking-wider block">
+            Subsystem Overlays
+          </span>
+
+          <!-- Toggle: PV Panels -->
+          <label class="flex items-center justify-between p-2 rounded bg-slate-900/60 border border-slate-800 hover:border-slate-700 cursor-pointer text-xs font-mono">
+            <div class="flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-blue-400"></span>
+              <span class="text-slate-300">PV Panels — Visible</span>
+            </div>
+            <input id="toggle-pv" type="checkbox" checked class="w-4 h-4 rounded bg-slate-800 border-slate-700 text-cyan-400 focus:ring-0 cursor-pointer">
+          </label>
+
+          <!-- Toggle: Engineering Labels -->
+          <label class="flex items-center justify-between p-2 rounded bg-slate-900/60 border border-slate-800 hover:border-slate-700 cursor-pointer text-xs font-mono">
+            <div class="flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
+              <span class="text-slate-300">Engineering Labels</span>
+            </div>
+            <input id="toggle-labels" type="checkbox" checked class="w-4 h-4 rounded bg-slate-800 border-slate-700 text-cyan-400 focus:ring-0 cursor-pointer">
+          </label>
+
+          <!-- Toggle: Exploded View -->
+          <label class="flex items-center justify-between p-2 rounded bg-slate-900/60 border border-slate-800 hover:border-slate-700 cursor-pointer text-xs font-mono">
+            <div class="flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+              <span class="text-slate-300">Exploded View</span>
+            </div>
+            <input id="toggle-exploded" type="checkbox" class="w-4 h-4 rounded bg-slate-800 border-slate-700 text-cyan-400 focus:ring-0 cursor-pointer">
+          </label>
+
+          <!-- Toggle: Dimensions Overlay -->
+          <label class="flex items-center justify-between p-2 rounded bg-slate-900/60 border border-slate-800 hover:border-slate-700 cursor-pointer text-xs font-mono">
+            <div class="flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-purple-400"></span>
+              <span class="text-slate-300">Dimensions Overlay</span>
+            </div>
+            <input id="toggle-dimensions" type="checkbox" checked class="w-4 h-4 rounded bg-slate-800 border-slate-700 text-cyan-400 focus:ring-0 cursor-pointer">
+          </label>
+
+          <!-- Toggle: Servo Monitor / I/O -->
+          <label class="flex items-center justify-between p-2 rounded bg-slate-900/60 border border-slate-800 hover:border-slate-700 cursor-pointer text-xs font-mono">
+            <div class="flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+              <span class="text-slate-300">Servo Monitor / I/O</span>
+            </div>
+            <input id="toggle-servo" type="checkbox" checked class="w-4 h-4 rounded bg-slate-800 border-slate-700 text-cyan-400 focus:ring-0 cursor-pointer">
+          </label>
+        </div>
+
+        <!-- Selection Info Box -->
+        <div class="p-2.5 bg-slate-900 border border-slate-800 rounded text-xs font-mono space-y-1">
+          <div class="text-[10px] text-slate-500 uppercase">Active Selection</div>
+          <div id="txt-selection" class="font-bold text-cyan-400 truncate">Hybrid Power Hub</div>
+          <div class="text-[10px] text-slate-400">Click any mesh in 3D to inspect</div>
+        </div>
+      </div>
+
+      <!-- Bottom Reset Action -->
+      <div class="p-3 border-t border-slate-800 bg-slate-900/40">
+        <button id="btn-reset-assembly" class="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-mono text-xs rounded border border-slate-700 transition flex items-center justify-center gap-1.5 cursor-pointer">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+          <span>RESET ASSEMBLY</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- ----------------------------------------------------------------------- -->
+    <!-- CENTER WORKSPACE: 3D VIEWPORT & HUD                                     -->
+    <!-- ----------------------------------------------------------------------- -->
+    <section class="flex-1 flex flex-col bg-[#0B0F19] min-w-0 relative overflow-hidden">
+      
+      <!-- Top Floating Viewport Toolbar -->
+      <div class="absolute top-3 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1 bg-[#111827]/90 border border-slate-700/80 rounded-lg p-1 shadow-2xl backdrop-blur-md">
+        <button id="btn-view-iso" class="px-2.5 py-1 text-xs font-mono font-semibold rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 hover:bg-cyan-500/30 transition cursor-pointer">
+          ISOMETRIC
+        </button>
+        <button id="btn-view-front" class="px-2.5 py-1 text-xs font-mono font-semibold rounded text-slate-300 hover:text-white hover:bg-slate-800 transition cursor-pointer">
+          FRONT
+        </button>
+        <button id="btn-view-side" class="px-2.5 py-1 text-xs font-mono font-semibold rounded text-slate-300 hover:text-white hover:bg-slate-800 transition cursor-pointer">
+          SIDE
+        </button>
+        <button id="btn-view-top" class="px-2.5 py-1 text-xs font-mono font-semibold rounded text-slate-300 hover:text-white hover:bg-slate-800 transition cursor-pointer">
+          TOP
+        </button>
+        <div class="h-4 w-px bg-slate-700 mx-0.5"></div>
+        <button id="btn-view-fit" class="px-2.5 py-1 text-xs font-mono font-semibold rounded text-slate-300 hover:text-white hover:bg-slate-800 transition flex items-center gap-1 cursor-pointer">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg>
+          FIT MODEL
+        </button>
+      </div>
+
+      <!-- 3D Three.js Canvas Container -->
+      <div id="viewport-container" class="flex-1 w-full h-full relative cursor-grab active:cursor-grabbing">
+        <!-- 3D Overlays (Dimension annotations & engineering tags) -->
+        <div id="labels-container" class="absolute inset-0 pointer-events-none overflow-hidden"></div>
+      </div>
+
+      <!-- Bottom Live Telemetry HUD Bar (6-Column Grid) -->
+      <div class="h-20 bg-[#0E1422] border-t border-slate-800 px-3 py-2 shrink-0 z-20">
+        <div class="h-full grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+          
+          <!-- Metric 1: Wind Speed -->
+          <div class="bg-slate-900/80 border border-slate-800 rounded p-1.5 flex flex-col justify-between">
+            <span class="text-[10px] font-mono text-slate-400 font-bold uppercase tracking-wider">WIND SPEED</span>
+            <div class="flex items-baseline justify-between">
+              <span id="hud-wind" class="text-base font-mono font-extrabold text-cyan-400">5.0</span>
+              <span class="text-[10px] font-mono text-slate-500">m/s</span>
+            </div>
+          </div>
+
+          <!-- Metric 2: PV Voltage -->
+          <div class="bg-slate-900/80 border border-slate-800 rounded p-1.5 flex flex-col justify-between">
+            <span class="text-[10px] font-mono text-slate-400 font-bold uppercase tracking-wider">PV VOLTAGE</span>
+            <div class="flex items-baseline justify-between">
+              <span id="hud-pv-volt" class="text-base font-mono font-extrabold text-blue-400">16.9</span>
+              <span class="text-[10px] font-mono text-slate-500">V</span>
+            </div>
+          </div>
+
+          <!-- Metric 3: PV Current -->
+          <div class="bg-slate-900/80 border border-slate-800 rounded p-1.5 flex flex-col justify-between">
+            <span class="text-[10px] font-mono text-slate-400 font-bold uppercase tracking-wider">PV CURRENT</span>
+            <div class="flex items-baseline justify-between">
+              <span id="hud-pv-curr" class="text-base font-mono font-extrabold text-amber-400">1.78</span>
+              <span class="text-[10px] font-mono text-slate-500">A</span>
+            </div>
+          </div>
+
+          <!-- Metric 4: Generator Voltage -->
+          <div class="bg-slate-900/80 border border-slate-800 rounded p-1.5 flex flex-col justify-between">
+            <span class="text-[10px] font-mono text-slate-400 font-bold uppercase tracking-wider">GEN VOLTAGE</span>
+            <div class="flex items-baseline justify-between">
+              <span id="hud-gen-volt" class="text-base font-mono font-extrabold text-emerald-400">16.8</span>
+              <span class="text-[10px] font-mono text-slate-500">V</span>
+            </div>
+          </div>
+
+          <!-- Metric 5: Temperature -->
+          <div class="bg-slate-900/80 border border-slate-800 rounded p-1.5 flex flex-col justify-between">
+            <span class="text-[10px] font-mono text-slate-400 font-bold uppercase tracking-wider">TEMPERATURE</span>
+            <div class="flex items-baseline justify-between">
+              <span id="hud-temp" class="text-base font-mono font-extrabold text-rose-400">29.1</span>
+              <span class="text-[10px] font-mono text-slate-500">°C</span>
+            </div>
+          </div>
+
+          <!-- Metric 6: Status -->
+          <div class="bg-slate-900/80 border border-slate-800 rounded p-1.5 flex flex-col justify-between">
+            <span class="text-[10px] font-mono text-slate-400 font-bold uppercase tracking-wider">SYSTEM STATUS</span>
+            <div class="flex items-center gap-2">
+              <span id="hud-status-led" class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span id="hud-status-txt" class="text-xs font-mono font-extrabold text-emerald-400">RUNNING</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ----------------------------------------------------------------------- -->
+    <!-- RIGHT PANEL: COMPONENT SPECS & SIMULATION                               -->
+    <!-- ----------------------------------------------------------------------- -->
+    <aside class="w-72 sm:w-80 bg-[#111827] border-l border-slate-800 flex flex-col shrink-0 z-20 overflow-y-auto">
+      
+      <!-- Section Title -->
+      <div class="p-3 border-b border-slate-800 flex items-center justify-between bg-slate-900/60">
+        <div class="flex items-center gap-2">
+          <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+          <span class="text-xs font-bold font-mono tracking-wider text-slate-200 uppercase">Specs & Simulation</span>
+        </div>
+      </div>
+
+      <div class="p-3 space-y-4 flex-1">
+        
+        <!-- Selected Component Card -->
+        <div class="bg-slate-900/90 border border-slate-800 rounded-lg p-3 space-y-2.5">
+          <div class="flex items-start justify-between">
+            <div>
+              <span class="text-[10px] font-mono text-slate-500 uppercase">Component Specification</span>
+              <h4 id="spec-name" class="text-xs font-mono font-bold text-white leading-tight">Hybrid Power Core Assembly</h4>
+            </div>
+            <span class="text-[10px] font-mono text-cyan-400 bg-cyan-950/80 px-1.5 py-0.5 rounded border border-cyan-800/60">ISO 9001</span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2 text-xs font-mono">
+            <div class="bg-slate-800/60 p-2 rounded">
+              <span class="text-[10px] text-slate-400 block">MATERIAL</span>
+              <span id="spec-material" class="text-slate-200 font-semibold text-[11px]">CFRP / 6061-T6</span>
+            </div>
+            <div class="bg-slate-800/60 p-2 rounded">
+              <span class="text-[10px] text-slate-400 block">TOTAL MASS</span>
+              <span id="spec-mass" class="text-slate-200 font-semibold text-[11px]">14.85 kg</span>
+            </div>
+            <div class="bg-slate-800/60 p-2 rounded col-span-2">
+              <span class="text-[10px] text-slate-400 block">STRESS LIMIT / SAFETY FACTOR</span>
+              <span id="spec-stress" class="text-emerald-400 font-semibold text-[11px]">310 MPa (SF: 3.68)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Wind / Solar Environment Simulation Section -->
+        <div class="bg-slate-900/90 border border-slate-800 rounded-lg p-3 space-y-3">
+          <span class="text-[11px] font-mono font-semibold text-slate-400 uppercase tracking-wider block">
+            Environmental Boundary Conditions
+          </span>
+
+          <!-- Wind Velocity Slider -->
+          <div class="space-y-1.5">
+            <div class="flex items-center justify-between text-xs font-mono">
+              <span class="text-slate-300">Wind Velocity</span>
+              <div class="flex items-baseline gap-1 font-bold text-cyan-400">
+                <span id="txt-wind-val">5.0</span>
+                <span class="text-[10px] text-slate-400">m/s</span>
+              </div>
+            </div>
+            <input id="slider-wind" type="range" min="0" max="25" step="0.5" value="5" class="w-full h-1.5 bg-slate-800 rounded cursor-pointer">
+          </div>
+
+          <!-- Solar Irradiance Slider -->
+          <div class="space-y-1.5">
+            <div class="flex items-center justify-between text-xs font-mono">
+              <span class="text-slate-300">Solar Irradiance</span>
+              <div class="flex items-baseline gap-1 font-bold text-amber-400">
+                <span id="txt-solar-val">850</span>
+                <span class="text-[10px] text-slate-400">W/m²</span>
+              </div>
+            </div>
+            <input id="slider-solar" type="range" min="0" max="1200" step="25" value="850" class="w-full h-1.5 bg-slate-800 rounded cursor-pointer">
+          </div>
+
+          <!-- Auto RPM Sync Toggle -->
+          <label class="flex items-center justify-between pt-1 border-t border-slate-800 cursor-pointer text-xs font-mono">
+            <span class="text-slate-300">Auto RPM Synchronization</span>
+            <input id="toggle-autosync" type="checkbox" checked class="w-4 h-4 rounded bg-slate-800 border-slate-700 text-cyan-400 focus:ring-0 cursor-pointer">
+          </label>
+        </div>
+
+        <!-- Serial Monitor / I/O Terminal -->
+        <div class="space-y-1.5 flex-1 flex flex-col">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-mono font-semibold text-slate-400 uppercase tracking-wider">
+              Serial Telemetry Log
+            </span>
+            <button id="btn-clear-log" class="text-[10px] font-mono text-slate-500 hover:text-slate-300 cursor-pointer">
+              CLEAR
+            </button>
+          </div>
+          <div id="terminal-box" class="h-44 bg-black/90 border border-slate-800 rounded-lg p-2 font-mono text-[10.5px] leading-relaxed text-emerald-400 overflow-y-auto terminal-glow select-text">
+            <div>[SYS_BOOT] CADVANTA AERIS Kernel v3.4.1 initialized</div>
+            <div>[CAN_BUS] Hardware interface linked at 500 kbps</div>
+            <div>[MPPT] Solar tracker online. $P_{max} = 142.4W$</div>
+            <div>[GEN_CTRL] Field excitation coil active</div>
+          </div>
+        </div>
+
+      </div>
+    </aside>
+
+  </main>
+
+  <!-- ========================================================================= -->
+  <!-- THREE.JS SIMULATION & INTERACTIVE SCRIPT                                  -->
+  <!-- ========================================================================= -->
+  <script>
+    // State management
+    const state = {
+      isRunning: true,
+      rpm: 120.0,
+      targetRpm: 120.0,
+      windSpeed: 5.0,
+      solarIrradiance: 850,
+      autoSync: true,
+      pvVisible: true,
+      labelsVisible: true,
+      exploded: false,
+      dimensionsVisible: true,
+      servoVisible: true,
+      selectedPart: 'Hybrid Power Core Assembly',
+      explodedProgress: 0,
+      time: 0
+    };
+
+    // Component specifications dictionary
+    const specsData = {
+      'Hybrid Power Core Assembly': {
+        material: 'CFRP / 6061-T6 Al',
+        mass: '14.85 kg',
+        stress: '310 MPa (SF: 3.68)'
+      },
+      'Solar PV Array': {
+        material: 'Mono-Si / ETFE Film',
+        mass: '3.42 kg',
+        stress: '140 MPa (SF: 4.12)'
+      },
+      'Curved Aerodynamic Blades': {
+        material: 'Carbon Fiber / Epoxy',
+        mass: '4.80 kg',
+        stress: '420 MPa (SF: 3.20)'
+      },
+      'Central Torque Shaft': {
+        material: 'AISI 4140 Alloy Steel',
+        mass: '3.10 kg',
+        stress: '650 MPa (SF: 5.10)'
+      },
+      'Direct-Drive PM Generator': {
+        material: 'NdFeB / Copper / Steel',
+        mass: '5.25 kg',
+        stress: '280 MPa (SF: 4.50)'
+      },
+      'Thrust Bearing Assembly': {
+        material: 'Chrome Steel 52100',
+        mass: '1.20 kg',
+        stress: '820 MPa (SF: 6.20)'
+      }
+    };
+
+    // -------------------------------------------------------------------------
+    // THREE.JS SETUP
+    // -------------------------------------------------------------------------
+    const container = document.getElementById('viewport-container');
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x0B0F19);
+    scene.fog = new THREE.FogExp2(0x0B0F19, 0.025);
+
+    const camera = new THREE.PerspectiveCamera(42, container.clientWidth / container.clientHeight, 0.1, 1000);
+    camera.position.set(16, 12, 18);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    container.appendChild(renderer.domElement);
+
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.target.set(0, 4.5, 0);
+    controls.maxPolarAngle = Math.PI / 2 + 0.05;
+
+    // Lighting
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+    scene.add(ambientLight);
+
+    const keyLight = new THREE.DirectionalLight(0xdff4ff, 1.8);
+    keyLight.position.set(20, 30, 20);
+    keyLight.castShadow = true;
+    keyLight.shadow.mapSize.width = 2048;
+    keyLight.shadow.mapSize.height = 2048;
+    scene.add(keyLight);
+
+    const fillLight = new THREE.DirectionalLight(0x00d9ff, 0.6);
+    fillLight.position.set(-20, 10, -20);
+    scene.add(fillLight);
+
+    const groundLight = new THREE.DirectionalLight(0x10b981, 0.3);
+    groundLight.position.set(0, -10, 0);
+    scene.add(groundLight);
+
+    // Grid Floor
+    const gridHelper = new THREE.GridHelper(32, 32, 0x00D9FF, 0x1E293B);
+    gridHelper.position.y = 0;
+    scene.add(gridHelper);
+
+    // Radial floor markings
+    const ringGeo = new THREE.RingGeometry(5.95, 6.05, 64);
+    const ringMat = new THREE.MeshBasicMaterial({ color: 0x00d9ff, side: THREE.DoubleSide, transparent: true, opacity: 0.25 });
+    const ringMesh = new THREE.Mesh(ringGeo, ringMat);
+    ringMesh.rotation.x = Math.PI / 2;
+    ringMesh.position.y = 0.02;
+    scene.add(ringMesh);
+
+    // -------------------------------------------------------------------------
+    // MECHANICAL MODEL GENERATION (AERIS HYBRID TURBINE)
+    // -------------------------------------------------------------------------
+    const turbineAssembly = new THREE.Group();
+    scene.add(turbineAssembly);
+
+    // Sub-groups for exploded view animation
+    const rotorGroup = new THREE.Group();
+    const statorGroup = new THREE.Group();
+    const shaftGroup = new THREE.Group();
+    const capGroup = new THREE.Group();
+    const bladesGroup = new THREE.Group();
+    const pvPanelsGroup = new THREE.Group();
+
+    turbineAssembly.add(statorGroup);
+    turbineAssembly.add(rotorGroup);
+    rotorGroup.add(shaftGroup);
+    rotorGroup.add(bladesGroup);
+    rotorGroup.add(capGroup);
+
+    // Materials
+    const metalMat = new THREE.MeshStandardMaterial({
+      color: 0x8a9ba8,
+      metalness: 0.85,
+      roughness: 0.25
+    });
+
+    const darkAlloyMat = new THREE.MeshStandardMaterial({
+      color: 0x1e293b,
+      metalness: 0.7,
+      roughness: 0.35
+    });
+
+    const bladeMat = new THREE.MeshStandardMaterial({
+      color: 0x0f172a,
+      metalness: 0.4,
+      roughness: 0.2
+    });
+
+    const pvMat = new THREE.MeshStandardMaterial({
+      color: 0x0a1945,
+      emissive: 0x030816,
+      metalness: 0.9,
+      roughness: 0.15
+    });
+
+    const copperMat = new THREE.MeshStandardMaterial({
+      color: 0xd97706,
+      metalness: 0.9,
+      roughness: 0.3
+    });
+
+    const cyanAccentMat = new THREE.MeshBasicMaterial({
+      color: 0x00d9ff,
+      wireframe: true
+    });
+
+    // 1. Stator / Generator Base (Non-rotating)
+    const basePlate = new THREE.Mesh(new THREE.CylinderGeometry(2.4, 2.6, 0.4, 32), darkAlloyMat);
+    basePlate.position.y = 0.2;
+    statorGroup.add(basePlate);
+
+    const statorHousing = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 1.8, 1.8, 32), darkAlloyMat);
+    statorHousing.position.y = 1.3;
+    statorGroup.add(statorHousing);
+
+    // Stator Coils (internal visible cooling fins)
+    for (let i = 0; i < 12; i++) {
+      const angle = (i / 12) * Math.PI * 2;
+      const fin = new THREE.Mesh(new THREE.BoxGeometry(0.12, 1.4, 0.4), copperMat);
+      fin.position.set(Math.cos(angle) * 1.5, 1.3, Math.sin(angle) * 1.5);
+      fin.rotation.y = -angle;
+      statorGroup.add(fin);
+    }
+
+    // Lower thrust bearing hub
+    const bearingHub = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.2, 0.5, 32), metalMat);
+    bearingHub.position.y = 2.4;
+    statorGroup.add(bearingHub);
+
+    // 2. Central Torque Shaft (Rotating)
+    const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 8.5, 32), metalMat);
+    shaft.position.y = 6.0;
+    shaftGroup.add(shaft);
+
+    // Top Aerodynamic Cap
+    const topCap = new THREE.Mesh(new THREE.ConeGeometry(0.6, 1.2, 32), metalMat);
+    topCap.position.y = 10.8;
+    capGroup.add(topCap);
+
+    // 3. Curved Hybrid Blades (3-Blade Savonius/Darrieus Vertical Axis)
+    const bladeCount = 3;
+    const bladeRadius = 2.8;
+    const bladeHeight = 6.5;
+    const individualBlades = [];
+    const individualPvs = [];
+
+    for (let i = 0; i < bladeCount; i++) {
+      const angle = (i / bladeCount) * Math.PI * 2;
+      const bladeArmGroup = new THREE.Group();
+      bladeArmGroup.rotation.y = angle;
+
+      // Connecting struts (top, middle, bottom)
+      const strutLevels = [3.5, 6.2, 9.0];
+      strutLevels.forEach(lvl => {
+        const strut = new THREE.Mesh(new THREE.BoxGeometry(bladeRadius, 0.1, 0.35), darkAlloyMat);
+        strut.position.set(bladeRadius / 2, lvl, 0);
+        bladeArmGroup.add(strut);
+      });
+
+      // Curved Aerofoil Blade
+      // Create a curved vertical shell using a Cylinder segment
+      const bladeGeometry = new THREE.CylinderGeometry(
+        0.9, 0.9, bladeHeight, 24, 1, true, 0, Math.PI * 0.9
+      );
+      const blade = new THREE.Mesh(bladeGeometry, bladeMat);
+      blade.position.set(bladeRadius, 6.2, 0);
+      blade.rotation.y = Math.PI / 4;
+      bladeArmGroup.add(blade);
+      individualBlades.push(blade);
+
+      // Solar PV Layer mounted on blade outer curvature
+      const pvGeometry = new THREE.CylinderGeometry(
+        0.91, 0.91, bladeHeight * 0.85, 24, 1, true, 0.05, Math.PI * 0.8
+      );
+      const pvMesh = new THREE.Mesh(pvGeometry, pvMat);
+      pvMesh.position.set(bladeRadius, 6.2, 0);
+      pvMesh.rotation.y = Math.PI / 4;
+      bladeArmGroup.add(pvMesh);
+      individualPvs.push(pvMesh);
+
+      bladesGroup.add(bladeArmGroup);
+    }
+
+    // 4. Dimension Markers & Lines (Optional Overlay)
+    const dimGroup = new THREE.Group();
+    scene.add(dimGroup);
+
+    // Vertical Height Line
+    const lineMat = new THREE.LineBasicMaterial({ color: 0x00D9FF, transparent: true, opacity: 0.6 });
+    const hLineGeo = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(-4.2, 0, 0),
+      new THREE.Vector3(-4.2, 11.4, 0)
+    ]);
+    const hLine = new THREE.Line(hLineGeo, lineMat);
+    dimGroup.add(hLine);
+
+    // Horizontal Diameter Line
+    const dLineGeo = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(-3.8, 11.6, 0),
+      new THREE.Vector3(3.8, 11.6, 0)
+    ]);
+    const dLine = new THREE.Line(dLineGeo, lineMat);
+    dimGroup.add(dLine);
+
+    // -------------------------------------------------------------------------
+    // ENGINEERING LABELS OVERLAY (HTML Pinned Coordinates)
+    // -------------------------------------------------------------------------
+    const labelsContainer = document.getElementById('labels-container');
+    const labelPoints = [
+      { name: 'Solar PV Array (Mono-Si)', pos: new THREE.Vector3(2.5, 7.5, 1.2), color: 'text-blue-400' },
+      { name: 'Aerodynamic VAWT Blade', pos: new THREE.Vector3(-2.6, 6.0, -1.0), color: 'text-cyan-400' },
+      { name: 'Direct-Drive Generator', pos: new THREE.Vector3(0, 1.4, 1.8), color: 'text-emerald-400' },
+      { name: 'Central Torque Shaft', pos: new THREE.Vector3(0, 8.5, 0), color: 'text-amber-400' }
+    ];
+
+    const labelElements = labelPoints.map(pt => {
+      const el = document.createElement('div');
+      el.className = `absolute transform -translate-x-1/2 -translate-y-1/2 pointer-events-auto cursor-pointer transition-all duration-150`;
+      el.innerHTML = `
+        <div class="flex items-center gap-1.5 bg-[#0E1422]/90 border border-slate-700/80 px-2 py-0.5 rounded shadow-lg backdrop-blur-xs hover:border-cyan-400">
+          <span class="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
+          <span class="text-[10.5px] font-mono font-bold ${pt.color}">${pt.name}</span>
+        </div>
+      `;
+      el.addEventListener('click', () => {
+        selectComponent(pt.name);
+      });
+      labelsContainer.appendChild(el);
+      return { el, pos: pt.pos };
+    });
+
+    function updateLabelsPosition() {
+      if (!state.labelsVisible) {
+        labelsContainer.style.display = 'none';
+        return;
+      }
+      labelsContainer.style.display = 'block';
+
+      const tempV = new THREE.Vector3();
+      labelElements.forEach(item => {
+        tempV.copy(item.pos);
+        tempV.project(camera);
+
+        const x = (tempV.x * 0.5 + 0.5) * container.clientWidth;
+        const y = (-(tempV.y * 0.5) + 0.5) * container.clientHeight;
+
+        if (tempV.z < 1) {
+          item.el.style.display = 'block';
+          item.el.style.left = `${x}px`;
+          item.el.style.top = `${y}px`;
+        } else {
+          item.el.style.display = 'none';
+        }
+      });
+    }
+
+    // -------------------------------------------------------------------------
+    // USER INTERACTION & TELEMETRY LOGIC
+    // -------------------------------------------------------------------------
+    const terminalBox = document.getElementById('terminal-box');
+
+    function logTerminal(msg) {
+      const line = document.createElement('div');
+      const timeStr = new Date().toISOString().substring(11, 19);
+      line.textContent = `[${timeStr}] ${msg}`;
+      terminalBox.appendChild(line);
+      terminalBox.scrollTop = terminalBox.scrollHeight;
+      // Limit to 60 lines
+      if (terminalBox.children.length > 60) {
+        terminalBox.removeChild(terminalBox.children[0]);
+      }
+    }
+
+    function selectComponent(name) {
+      state.selectedPart = name;
+      document.getElementById('txt-selection').textContent = name;
+      document.getElementById('spec-name').textContent = name;
+
+      const spec = specsData[name] || specsData['Hybrid Power Core Assembly'];
+      document.getElementById('spec-material').textContent = spec.material;
+      document.getElementById('spec-mass').textContent = spec.mass;
+      document.getElementById('spec-stress').textContent = spec.stress;
+
+      logTerminal(`COMPONENT_SELECT: ${name.toUpperCase()}`);
+    }
+
+    // UI Event Listeners
+    const btnStart = document.getElementById('btn-start');
+    const btnStop = document.getElementById('btn-stop');
+    const sliderRpm = document.getElementById('slider-rpm');
+    const txtRpm = document.getElementById('txt-rpm');
+    const hudStatusLed = document.getElementById('hud-status-led');
+    const hudStatusTxt = document.getElementById('hud-status-txt');
+
+    btnStart.addEventListener('click', () => {
+      state.isRunning = true;
+      state.targetRpm = parseFloat(sliderRpm.value) || 120.0;
+      hudStatusLed.className = 'w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse';
+      hudStatusTxt.className = 'text-xs font-mono font-extrabold text-emerald-400';
+      hudStatusTxt.textContent = 'RUNNING';
+      logTerminal('CMD: START_TURBINE -> ENGAGE');
+    });
+
+    btnStop.addEventListener('click', () => {
+      state.isRunning = false;
+      state.targetRpm = 0.0;
+      hudStatusLed.className = 'w-2.5 h-2.5 rounded-full bg-rose-400';
+      hudStatusTxt.className = 'text-xs font-mono font-extrabold text-rose-400';
+      hudStatusTxt.textContent = 'STOPPED';
+      logTerminal('CMD: STOP_TURBINE -> ELEC_BRAKE_ACTIVE');
+    });
+
+    sliderRpm.addEventListener('input', (e) => {
+      const val = parseFloat(e.target.value);
+      state.targetRpm = state.isRunning ? val : 0;
+      txtRpm.textContent = val.toFixed(1);
+      state.autoSync = false;
+      document.getElementById('toggle-autosync').checked = false;
+    });
+
+    // Subsystem Toggles
+    document.getElementById('toggle-pv').addEventListener('change', (e) => {
+      state.pvVisible = e.target.checked;
+      individualPvs.forEach(pv => pv.visible = state.pvVisible);
+      logTerminal(`SYS_CFG: PV_PANELS_${state.pvVisible ? 'ENABLED' : 'HIDDEN'}`);
+    });
+
+    document.getElementById('toggle-labels').addEventListener('change', (e) => {
+      state.labelsVisible = e.target.checked;
+      updateLabelsPosition();
+    });
+
+    document.getElementById('toggle-exploded').addEventListener('change', (e) => {
+      state.exploded = e.target.checked;
+      logTerminal(`VIEW_MODE: EXPLODED_${state.exploded ? 'ON' : 'OFF'}`);
+    });
+
+    document.getElementById('toggle-dimensions').addEventListener('change', (e) => {
+      state.dimensionsVisible = e.target.checked;
+      dimGroup.visible = state.dimensionsVisible;
+    });
+
+    document.getElementById('btn-reset-assembly').addEventListener('click', () => {
+      camera.position.set(16, 12, 18);
+      controls.target.set(0, 4.5, 0);
+      state.exploded = false;
+      document.getElementById('toggle-exploded').checked = false;
+      logTerminal('ASSEMBLY: RESET_COORDINATES_OK');
+    });
+
+    // Environmental Boundary Condition Sliders
+    const sliderWind = document.getElementById('slider-wind');
+    const txtWindVal = document.getElementById('txt-wind-val');
+    const hudWind = document.getElementById('hud-wind');
+
+    sliderWind.addEventListener('input', (e) => {
+      const v = parseFloat(e.target.value);
+      state.windSpeed = v;
+      txtWindVal.textContent = v.toFixed(1);
+      hudWind.textContent = v.toFixed(1);
+
+      if (state.autoSync && state.isRunning) {
+        // Aerodynamic tip-speed ratio formula: RPM = (60 * TSR * v) / (pi * D)
+        const tsr = 2.1;
+        const diam = 5.6;
+        const calculatedRpm = Math.min(300, (60 * tsr * v) / (Math.PI * diam));
+        sliderRpm.value = calculatedRpm.toFixed(0);
+        state.targetRpm = calculatedRpm;
+        txtRpm.textContent = calculatedRpm.toFixed(1);
+      }
+    });
+
+    const sliderSolar = document.getElementById('slider-solar');
+    const txtSolarVal = document.getElementById('txt-solar-val');
+
+    sliderSolar.addEventListener('input', (e) => {
+      const s = parseInt(e.target.value);
+      state.solarIrradiance = s;
+      txtSolarVal.textContent = s;
+    });
+
+    document.getElementById('toggle-autosync').addEventListener('change', (e) => {
+      state.autoSync = e.target.checked;
+      logTerminal(`CONTROL: AUTO_RPM_SYNC_${state.autoSync ? 'LOCKED' : 'MANUAL'}`);
+    });
+
+    document.getElementById('btn-clear-log').addEventListener('click', () => {
+      terminalBox.innerHTML = '<div>[LOG_CLEARED] Serial buffer emptied</div>';
+    });
+
+    // Camera preset buttons
+    document.getElementById('btn-view-iso').addEventListener('click', () => {
+      tweenCamera(16, 12, 18, 0, 4.5, 0);
+    });
+    document.getElementById('btn-view-front').addEventListener('click', () => {
+      tweenCamera(0, 4.5, 22, 0, 4.5, 0);
+    });
+    document.getElementById('btn-view-side').addEventListener('click', () => {
+      tweenCamera(22, 4.5, 0, 0, 4.5, 0);
+    });
+    document.getElementById('btn-view-top').addEventListener('click', () => {
+      tweenCamera(0, 24, 0.01, 0, 0, 0);
+    });
+    document.getElementById('btn-view-fit').addEventListener('click', () => {
+      tweenCamera(16, 12, 18, 0, 4.5, 0);
+    });
+
+    function tweenCamera(x, y, z, tx, ty, tz) {
+      camera.position.set(x, y, z);
+      controls.target.set(tx, ty, tz);
+    }
+
+    // Raycaster for 3D part selection
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+
+    renderer.domElement.addEventListener('pointerdown', (e) => {
+      const rect = renderer.domElement.getBoundingClientRect();
+      mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+      raycaster.setFromCamera(mouse, camera);
+      const intersects = raycaster.intersectObjects(turbineAssembly.children, true);
+
+      if (intersects.length > 0) {
+        const obj = intersects[0].object;
+        if (obj === shaft) {
+          selectComponent('Central Torque Shaft');
+        } else if (obj === statorHousing || obj === basePlate) {
+          selectComponent('Direct-Drive PM Generator');
+        } else if (individualPvs.includes(obj)) {
+          selectComponent('Solar PV Array');
+        } else if (individualBlades.includes(obj)) {
+          selectComponent('Curved Aerodynamic Blades');
+        } else if (obj === bearingHub) {
+          selectComponent('Thrust Bearing Assembly');
+        } else {
+          selectComponent('Hybrid Power Core Assembly');
+        }
+      }
+    });
+
+    // -------------------------------------------------------------------------
+    // ANIMATION & TELEMETRY UPDATE LOOP
+    // -------------------------------------------------------------------------
+    let lastTime = performance.now();
+    let telemetryTick = 0;
+
+    function animate(currentTime) {
+      requestAnimationFrame(animate);
+
+      const delta = (currentTime - lastTime) / 1000;
+      lastTime = currentTime;
+      state.time += delta;
+
+      // Smooth RPM transition
+      state.rpm += (state.targetRpm - state.rpm) * Math.min(1, delta * 3.0);
+      txtRpm.textContent = state.rpm.toFixed(1);
+
+      // Rotate turbine rotor
+      const rotationSpeed = (state.rpm * (2 * Math.PI) / 60) * delta;
+      rotorGroup.rotation.y += rotationSpeed;
+
+      // Exploded View Lerp Interpolation
+      const targetExplode = state.exploded ? 1.0 : 0.0;
+      state.explodedProgress += (targetExplode - state.explodedProgress) * 0.1;
+
+      // Expand blades radially
+      bladesGroup.children.forEach((arm, i) => {
+        const radialAngle = (i / bladeCount) * Math.PI * 2;
+        arm.position.x = Math.sin(radialAngle) * (state.explodedProgress * 1.8);
+        arm.position.z = Math.cos(radialAngle) * (state.explodedProgress * 1.8);
+      });
+
+      // Expand cap and top shaft vertically
+      capGroup.position.y = state.explodedProgress * 2.2;
+      statorGroup.position.y = -state.explodedProgress * 1.4;
+
+      // Update Live Telemetry HUD values
+      telemetryTick += delta;
+      if (telemetryTick > 0.15) {
+        telemetryTick = 0;
+
+        // PV Current & Voltage dynamic models
+        const pvVolt = (16.2 + (state.solarIrradiance / 1200) * 4.8).toFixed(1);
+        const pvCurr = ((state.solarIrradiance / 1200) * 2.4 * (0.95 + Math.sin(state.time * 2) * 0.05)).toFixed(2);
+        const genVolt = ((state.rpm / 300) * 24.5).toFixed(1);
+        const temp = (25.0 + (state.rpm / 300) * 8.5 + (state.solarIrradiance / 1200) * 3.0).toFixed(1);
+
+        document.getElementById('hud-pv-volt').textContent = pvVolt;
+        document.getElementById('hud-pv-curr').textContent = pvCurr;
+        document.getElementById('hud-gen-volt').textContent = genVolt;
+        document.getElementById('hud-temp').textContent = temp;
+
+        // Periodic terminal output
+        if (Math.random() < 0.2 && state.isRunning) {
+          const codes = [
+            `RPM_LOCK: ${state.rpm.toFixed(1)} [Δ0.02%]`,
+            `MPPT_OUT: ${pvVolt}V @ ${pvCurr}A -> BAT_OK`,
+            `GEN_EMF: ${genVolt}V (Torque: ${(state.rpm * 0.14).toFixed(2)} N·m)`,
+            `THERM_CORE: ${temp}°C (FAN: PASSIVE)`
+          ];
+          logTerminal(codes[Math.floor(Math.random() * codes.length)]);
+        }
+      }
+
+      controls.update();
+      updateLabelsPosition();
+      renderer.render(scene, camera);
+    }
+
+    requestAnimationFrame(animate);
+
+    // Responsive Canvas Resize
+    window.addEventListener('resize', () => {
+      camera.aspect = container.clientWidth / container.clientHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(container.clientWidth, container.clientHeight);
+    });
+
+    // Standalone code export modal/alert trigger
+    document.getElementById('btn-export-code').addEventListener('click', () => {
+      alert('This standalone HTML file is ready to be hosted on Vercel, Netlify, or loaded in any browser!');
+    });
+  </script>
+</body>
+</html>

@@ -12,6 +12,7 @@ import {
   Shield,
   FileCode2,
 } from 'lucide-react';
+import { motion } from 'motion/react';
 import { DesignRegistryItem } from '../../data/designRegistry';
 import { useDesignAccess } from '../../context/DesignAccessContext';
 import { useAuth } from '../../context/AuthContext';
@@ -22,7 +23,7 @@ interface DesignCardProps {
   onAddToAssembly?: (design: DesignRegistryItem) => void;
 }
 
-export const DesignCard: React.FC<DesignCardProps> = ({ design, onSelect, onAddToAssembly }) => {
+export const DesignCard: React.FC<DesignCardProps> = React.memo(({ design, onSelect, onAddToAssembly }) => {
   const {
     getDesignAccessStatus,
     favoriteDesignIds,
@@ -88,9 +89,12 @@ export const DesignCard: React.FC<DesignCardProps> = ({ design, onSelect, onAddT
   };
 
   return (
-    <div
+    <motion.div
       id={`design-card-${design.id}`}
-      className={`group relative flex flex-col bg-[#07130F] rounded-xl border transition-all duration-300 overflow-hidden ${
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
+      transition={{ duration: 0.2 }}
+      className={`group relative flex flex-col bg-[#07130F] rounded-xl border transition-colors duration-300 overflow-hidden ${
         isLocked
           ? 'border-[rgba(245,158,11,0.2)] hover:border-[#F59E0B]/60 shadow-[0_4px_20px_rgba(0,0,0,0.4)]'
           : 'border-[rgba(16,185,129,0.2)] hover:border-[#00F5A0] hover:shadow-[0_0_25px_rgba(0,245,160,0.15)] shadow-[0_4px_20px_rgba(0,0,0,0.4)]'
@@ -218,15 +222,15 @@ export const DesignCard: React.FC<DesignCardProps> = ({ design, onSelect, onAddT
         </div>
 
         {/* Action Button Strip */}
-        <div className="pt-2.5 border-t border-[rgba(16,185,129,0.1)] flex items-center gap-2">
+        <div className="pt-2.5 border-t border-[rgba(16,185,129,0.1)] flex items-center gap-1.5 sm:gap-2">
           {/* Details button */}
           <button
             id={`btn-details-${design.id}`}
             onClick={() => openDesignDetails(design)}
-            className="flex-1 py-1.5 px-2 rounded-lg bg-[#0B1E17] hover:bg-[#102B21] border border-[rgba(16,185,129,0.2)] hover:border-[#00F5A0]/40 text-[#8CA89E] hover:text-[#F0FDF4] text-[10px] font-mono flex items-center justify-center gap-1 transition-all"
+            className="flex-1 min-h-[38px] sm:min-h-[32px] py-1.5 px-2 rounded-lg bg-[#0B1E17] hover:bg-[#102B21] border border-[rgba(16,185,129,0.2)] hover:border-[#00F5A0]/40 text-[#8CA89E] hover:text-[#F0FDF4] text-[11px] sm:text-[10px] font-mono font-bold flex items-center justify-center gap-1 transition-all cursor-pointer"
             title="Inspect 3D specs, formulas & BOM"
           >
-            <Info className="w-3 h-3" />
+            <Info className="w-3.5 h-3.5" />
             <span>DETAILS</span>
           </button>
 
@@ -235,18 +239,18 @@ export const DesignCard: React.FC<DesignCardProps> = ({ design, onSelect, onAddT
             <button
               id={`btn-unlock-${design.id}`}
               onClick={handleCardAction}
-              className="flex-1 py-1.5 px-2 rounded-lg bg-gradient-to-r from-[#F59E0B] to-[#D97706] hover:brightness-110 text-[#07130F] text-[10px] font-mono font-bold flex items-center justify-center gap-1 shadow-md transition-all active:scale-95"
+              className="flex-1 min-h-[38px] sm:min-h-[32px] py-1.5 px-2 rounded-lg bg-gradient-to-r from-[#F59E0B] to-[#D97706] hover:brightness-110 text-[#07130F] text-[11px] sm:text-[10px] font-mono font-bold flex items-center justify-center gap-1 shadow-md transition-all active:scale-95 cursor-pointer"
             >
-              <Lock className="w-3 h-3" />
+              <Lock className="w-3.5 h-3.5" />
               <span>UNLOCK (₹{design.priceInr || 99})</span>
             </button>
           ) : (
             <button
               id={`btn-open-${design.id}`}
               onClick={handleCardAction}
-              className="flex-1 py-1.5 px-2 rounded-lg bg-gradient-to-r from-[#00F5A0] to-[#00D9FF] hover:brightness-110 text-[#02140D] text-[10px] font-mono font-bold flex items-center justify-center gap-1 shadow-md transition-all active:scale-95"
+              className="flex-1 min-h-[38px] sm:min-h-[32px] py-1.5 px-2 rounded-lg bg-gradient-to-r from-[#00F5A0] to-[#00D9FF] hover:brightness-110 text-[#02140D] text-[11px] sm:text-[10px] font-mono font-bold flex items-center justify-center gap-1 shadow-md transition-all active:scale-95 cursor-pointer"
             >
-              <FileCode2 className="w-3 h-3" />
+              <FileCode2 className="w-3.5 h-3.5" />
               <span>DESIGN</span>
             </button>
           )}
@@ -256,7 +260,7 @@ export const DesignCard: React.FC<DesignCardProps> = ({ design, onSelect, onAddT
             <button
               id={`btn-add-assembly-${design.id}`}
               onClick={handleAddToAssembly}
-              className={`p-1.5 rounded-lg border text-xs transition-all ${
+              className={`min-w-[38px] min-h-[38px] sm:min-w-[32px] sm:min-h-[32px] flex items-center justify-center p-1.5 rounded-lg border text-xs transition-all cursor-pointer shrink-0 ${
                 isLocked
                   ? 'bg-[#0B1E17] border-[rgba(245,158,11,0.3)] text-[#F59E0B] hover:bg-[#F59E0B]/20'
                   : 'bg-[#0B1E17] border-[rgba(16,185,129,0.3)] text-[#00F5A0] hover:bg-[#00F5A0]/20'
@@ -267,11 +271,11 @@ export const DesignCard: React.FC<DesignCardProps> = ({ design, onSelect, onAddT
                   : 'Add this design component to current assembly project'
               }
             >
-              <PlusCircle className="w-3.5 h-3.5" />
+              <PlusCircle className="w-4 h-4" />
             </button>
           )}
         </div>
       </div>
-    </div>
+    </motion.div>
   );
-};
+});

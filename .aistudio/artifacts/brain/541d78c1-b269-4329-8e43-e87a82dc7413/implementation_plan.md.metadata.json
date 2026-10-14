@@ -1,0 +1,6 @@
+{
+  "summary":  "Implementation plan to join SolidWorks API into VIRA AI: includes a dedicated SolidWorks API tab and interactive code console, dual VBA and C# .NET macro generation from parametric CAD models, a local SolidWorks desktop bridge connector (HTTP/WebSocket) for live model synchronization, and chat assistant automation.",
+  "updatedAt":  "2026-10-01T11:19:53.072109229Z",
+  "requestFeedback":  true,
+  "userFacing":  true
+}

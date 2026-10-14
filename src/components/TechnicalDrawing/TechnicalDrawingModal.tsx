@@ -43,37 +43,40 @@ export const TechnicalDrawingModal: React.FC<TechnicalDrawingModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
-      <div className="relative w-full max-w-5xl bg-white border-2 border-black rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 bg-black/75 backdrop-blur-xs animate-in fade-in">
+      <div className="relative w-full h-full sm:h-auto sm:max-w-5xl bg-white sm:border-2 sm:border-black sm:rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-none sm:max-h-[92vh]">
         {/* Header */}
-        <div className="p-3.5 bg-zinc-50 border-b border-zinc-200 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <FileText className="w-4 h-4 text-black" />
-            <h3 className="font-bold text-black font-mono text-xs uppercase tracking-wide">
-              CADVANTA 2D Engineering Blueprint — {part.name}
+        <div className="p-3 sm:p-3.5 bg-zinc-50 border-b border-zinc-200 flex items-center justify-between gap-2 shrink-0">
+          <div className="flex items-center gap-2 min-w-0">
+            <FileText className="w-4 h-4 text-black shrink-0" />
+            <h3 className="font-bold text-black font-mono text-xs uppercase tracking-wide truncate">
+              Blueprint — {part.name}
             </h3>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             <button
               id="btn-print-drawing"
               onClick={printDrawing}
-              className="px-3 py-1.5 bg-white hover:bg-zinc-100 border border-zinc-300 text-black rounded-lg text-xs font-mono flex items-center gap-1.5 transition-colors font-medium"
+              className="px-2.5 sm:px-3 py-1.5 min-h-[36px] bg-white hover:bg-zinc-100 border border-zinc-300 text-black rounded-lg text-xs font-mono flex items-center gap-1.5 transition-colors font-medium cursor-pointer"
+              title="Print Blueprint"
             >
               <Printer className="w-3.5 h-3.5" />
-              <span>Print</span>
+              <span className="hidden sm:inline">Print</span>
             </button>
             <button
               id="btn-download-drawing-svg"
               onClick={downloadSVG}
-              className="px-3.5 py-1.5 bg-black hover:bg-zinc-800 text-white font-bold rounded-lg text-xs font-mono flex items-center gap-1.5 transition-colors shadow-sm"
+              className="px-3 sm:px-3.5 py-1.5 min-h-[36px] bg-black hover:bg-zinc-800 text-white font-bold rounded-lg text-xs font-mono flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer"
+              title="Download SVG Blueprint"
             >
               <Download className="w-3.5 h-3.5" />
-              <span>Export SVG</span>
+              <span>SVG</span>
             </button>
             <button
               id="btn-close-drawing"
               onClick={onClose}
-              className="p-1.5 text-zinc-500 hover:text-black hover:bg-zinc-200 rounded-lg transition-colors ml-2"
+              className="p-2 min-w-[36px] min-h-[36px] flex items-center justify-center text-zinc-500 hover:text-black hover:bg-zinc-200 rounded-lg transition-colors cursor-pointer"
+              aria-label="Close drawing blueprint"
             >
               <X className="w-5 h-5" />
             </button>
@@ -81,8 +84,8 @@ export const TechnicalDrawingModal: React.FC<TechnicalDrawingModalProps> = ({
         </div>
 
         {/* Blueprint Canvas Viewport (High-Contrast White Paper & Black Technical Drawing) */}
-        <div className="flex-1 overflow-auto p-6 bg-zinc-100 flex items-center justify-center">
-          <div className="w-[880px] bg-white border-2 border-black p-5 shadow-xl rounded-lg text-black font-mono select-none">
+        <div className="flex-1 overflow-auto p-2 sm:p-6 bg-zinc-100 flex items-start sm:items-center justify-start sm:justify-center">
+          <div className="w-[840px] shrink-0 bg-white border-2 border-black p-3 sm:p-5 shadow-xl rounded-lg text-black font-mono select-none my-auto">
             {/* SVG Engineering Blueprint */}
             <svg
               ref={drawingRef}

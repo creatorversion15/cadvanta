@@ -1,7 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import { CADPart, MaterialInfo, AssemblyComponent } from '../../types/cad';
 import { MATERIALS, getMaterialById, calculateMass, calculatePartVolumeCm3 } from '../../engine/materials';
-import { generateCostEstimatorPDF } from '../../engine/pdfReportGenerator';
+import {
+  generateCostEstimatorPDF,
+  generateEngineeringSummaryReportPDF,
+} from '../../engine/pdfReportGenerator';
 import {
   isImperial,
   formatMass,
@@ -282,6 +285,15 @@ export const MaterialCostEstimatorModal: React.FC<MaterialCostEstimatorModalProp
     showNotification('Generated formal Material Cost PDF Summary Report!');
   };
 
+  const handleGenerateFullSummaryPDF = () => {
+    generateEngineeringSummaryReportPDF(activePart, {
+      currency,
+      multiplier: customPriceMultiplier,
+      downloadImmediately: true,
+    });
+    showNotification('Generated formal 3-Page Engineering Summary Report (Costs, FEA & DFM)!');
+  };
+
   if (!isOpen) return null;
 
   // Filtered materials
@@ -383,8 +395,20 @@ export const MaterialCostEstimatorModal: React.FC<MaterialCostEstimatorModalProp
               title="Download a formal PDF report of material costs and BOM rollup"
             >
               <FileText className="w-3.5 h-3.5 stroke-[2.5]" />
-              <span className="hidden sm:inline">Generate PDF Summary</span>
-              <span className="sm:hidden">PDF</span>
+              <span className="hidden sm:inline">Cost Report (PDF)</span>
+              <span className="sm:hidden">Cost PDF</span>
+            </button>
+
+            <button
+              id="btn-generate-full-engineering-summary"
+              type="button"
+              onClick={handleGenerateFullSummaryPDF}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0B1E17] hover:bg-[#102B21] border border-[rgba(0,245,160,0.3)] text-[#00F5A0] font-bold text-xs cursor-pointer transition-all active:scale-95 shrink-0"
+              title="Download formal 3-page Engineering Summary Report with FEA, Material Costs & DFM"
+            >
+              <FileText className="w-3.5 h-3.5 stroke-[2.5]" />
+              <span className="hidden sm:inline">Full Dossier (PDF)</span>
+              <span className="sm:hidden">Dossier</span>
             </button>
 
             <button

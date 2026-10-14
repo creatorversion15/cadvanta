@@ -16,6 +16,7 @@ import {
   ArrowRight,
   RefreshCw,
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { useDesignAccess, UnlockTarget } from '../../context/DesignAccessContext';
 import { useSubscription, UPI_ID, FOUNDER_NAME } from '../../context/SubscriptionContext';
 import { getPackById } from '../../data/designRegistry';
@@ -43,13 +44,11 @@ export const PremiumUnlockModal: React.FC<PremiumUnlockModalProps> = ({ onDesign
   const [copiedUpi, setCopiedUpi] = useState<boolean>(false);
   const [copiedAmount, setCopiedAmount] = useState<boolean>(false);
 
-  if (!unlockModalOpen || !unlockTarget) return null;
-
-  const currentDesign = unlockTarget.design;
-  const containingPack = currentDesign?.packId ? getPackById(currentDesign.packId) : unlockTarget.pack;
+  const currentDesign = unlockTarget?.design;
+  const containingPack = currentDesign?.packId ? getPackById(currentDesign.packId) : unlockTarget?.pack;
 
   // Compute pricing
-  const singlePrice = currentDesign?.priceInr || unlockTarget.priceInr || 99;
+  const singlePrice = currentDesign?.priceInr || unlockTarget?.priceInr || 99;
   const packPrice = containingPack?.priceInr || 299;
   const proPrice = 1.69;
 
@@ -114,9 +113,22 @@ export const PremiumUnlockModal: React.FC<PremiumUnlockModalProps> = ({ onDesign
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
-      <div className="relative w-full max-w-2xl bg-[#040E0A] border border-[rgba(16,185,129,0.3)] rounded-2xl shadow-[0_0_50px_rgba(0,0,0,0.8)] overflow-hidden flex flex-col max-h-[90vh]">
-        {/* Header Bar */}
+    <AnimatePresence>
+      {unlockModalOpen && unlockTarget && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md"
+        >
+          <motion.div
+            initial={{ scale: 0.95, y: 10, opacity: 0 }}
+            animate={{ scale: 1, y: 0, opacity: 1 }}
+            exit={{ scale: 0.95, y: 10, opacity: 0 }}
+            transition={{ type: 'spring', duration: 0.3, bounce: 0 }}
+            className="relative w-full max-w-2xl bg-[#040E0A] border border-[rgba(16,185,129,0.3)] rounded-2xl shadow-[0_0_50px_rgba(0,0,0,0.8)] overflow-hidden flex flex-col max-h-[90vh]"
+          >
+            {/* Header Bar */}
         <div className="px-6 py-4 bg-gradient-to-r from-[#071913] via-[#0B251C] to-[#071913] border-b border-[rgba(16,185,129,0.2)] flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-[#F59E0B]/20 border border-[#F59E0B]/50 flex items-center justify-center text-[#F59E0B] shadow-inner">
@@ -455,7 +467,9 @@ export const PremiumUnlockModal: React.FC<PremiumUnlockModalProps> = ({ onDesign
             </div>
           )}
         </div>
-      </div>
-    </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 };

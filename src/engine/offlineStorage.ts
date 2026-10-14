@@ -25,19 +25,38 @@ function openDB(): Promise<IDBDatabase> {
   });
 }
 
+// In-memory cache for ultra-fast instant project lookups (<1ms) across tabs
+let memoryProjectCache: ProjectRecord[] | null = null;
+
+export function invalidateProjectCache(): void {
+  memoryProjectCache = null;
+}
+
 export async function savePartOffline(part: CADPart): Promise<void> {
+  const record: ProjectRecord = {
+    id: part.id,
+    name: part.name,
+    part,
+    savedAt: Date.now(),
+    synced: false,
+    type: part.part_type,
+    materialName: part.material?.name,
+  };
+
+  // Optimistically update memory cache immediately
+  if (memoryProjectCache) {
+    const existingIndex = memoryProjectCache.findIndex((p) => p.id === part.id);
+    if (existingIndex >= 0) {
+      memoryProjectCache[existingIndex] = record;
+    } else {
+      memoryProjectCache.unshift(record);
+    }
+  }
+
   try {
     const db = await openDB();
     const tx = db.transaction(STORE_NAME, 'readwrite');
     const store = tx.objectStore(STORE_NAME);
-
-    const record = {
-      id: part.id,
-      name: part.name,
-      part,
-      savedAt: Date.now(),
-      synced: false,
-    };
 
     store.put(record);
 
@@ -66,6 +85,11 @@ export interface ProjectRecord {
 }
 
 export async function getAllProjectsOffline(): Promise<ProjectRecord[]> {
+  // If memory cache is available, return immediately for sub-millisecond tab switching
+  if (memoryProjectCache !== null) {
+    return [...memoryProjectCache];
+  }
+
   try {
     const db = await openDB();
     const tx = db.transaction(STORE_NAME, 'readonly');
@@ -77,7 +101,8 @@ export async function getAllProjectsOffline(): Promise<ProjectRecord[]> {
         const results: ProjectRecord[] = request.result || [];
         // Sort newest first
         results.sort((a, b) => b.savedAt - a.savedAt);
-        resolve(results);
+        memoryProjectCache = results;
+        resolve([...results]);
       };
       request.onerror = () => reject(request.error);
     });
@@ -107,11 +132,18 @@ export async function getAllProjectsOffline(): Promise<ProjectRecord[]> {
     } catch (e) {
       // ignore
     }
+    items.sort((a, b) => b.savedAt - a.savedAt);
+    memoryProjectCache = items;
     return items;
   }
 }
 
 export async function deleteProjectOffline(partId: string): Promise<void> {
+  // Optimistically remove from memory cache
+  if (memoryProjectCache) {
+    memoryProjectCache = memoryProjectCache.filter((p) => p.id !== partId);
+  }
+
   try {
     const db = await openDB();
     const tx = db.transaction(STORE_NAME, 'readwrite');

@@ -7,6 +7,7 @@ import {
   Boxes,
   Loader2,
 } from 'lucide-react';
+import { CadVantaLogoMark } from '../Brand/CadVantaLogo';
 
 export const AuthModal: React.FC = () => {
   const {
@@ -57,8 +58,8 @@ export const AuthModal: React.FC = () => {
         {/* Top Header & Close Button */}
         <div className="flex items-start justify-between gap-3 relative z-10">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#102B21] border border-[#00F5A0]/40 flex items-center justify-center text-[#00F5A0] shadow-[0_0_12px_rgba(0,245,160,0.2)]">
-              <Boxes className="w-5 h-5 text-[#00F5A0]" />
+            <div className="w-10 h-10 rounded-xl bg-[#102B21] border border-[#00F5A0]/40 flex items-center justify-center shadow-[0_0_12px_rgba(0,245,160,0.2)]">
+              <CadVantaLogoMark size={26} />
             </div>
             <div>
               <div className="flex items-center gap-2">

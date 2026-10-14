@@ -235,39 +235,39 @@ export const DesignHistory: React.FC<DesignHistoryProps> = ({
   };
 
   return (
-    <div className="w-full h-full flex flex-col bg-[#071510] rounded-xl border border-[rgba(16,185,129,0.2)] shadow-2xl overflow-hidden text-[#F0FDF4]">
+    <div className="w-full h-full flex flex-col bg-white dark:bg-[#071510] rounded-xl border border-[#CBD5E1] dark:border-[rgba(16,185,129,0.2)] shadow-sm overflow-hidden text-[#0F172A] dark:text-[#F0FDF4]">
       {/* Panel Top Header */}
-      <div className="p-3 border-b border-[rgba(16,185,129,0.18)] bg-[#040E0A] flex flex-col gap-2">
+      <div className="p-3 border-b border-[#E2E8F0] dark:border-[rgba(16,185,129,0.18)] bg-[#F8FAFC] dark:bg-[#040E0A] flex flex-col gap-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <History className="w-4 h-4 text-[#00F5A0]" />
-            <h2 className="text-xs font-bold font-mono text-[#F0FDF4] tracking-wide uppercase">
+            <History className="w-4 h-4 text-[#0284C7] dark:text-[#00F5A0]" />
+            <h2 className="text-xs font-bold font-mono text-[#0F172A] dark:text-[#F0FDF4] tracking-wide uppercase">
               Parametric Feature Kernel
             </h2>
           </div>
-          <div className="flex items-center gap-1.5 text-[10px] font-mono text-[#00F5A0] bg-[#102B21] px-2 py-0.5 rounded border border-[#00F5A0]/30 font-bold">
-            <Zap className="w-3 h-3 text-[#00F5A0]" />
+          <div className="flex items-center gap-1.5 text-[10px] font-mono text-[#0284C7] dark:text-[#00F5A0] bg-[#E0F2FE] dark:bg-[#102B21] px-2 py-0.5 rounded border border-[#BAE6FD] dark:border-[#00F5A0]/30 font-bold">
+            <Zap className="w-3 h-3 text-[#0284C7] dark:text-[#00F5A0]" />
             <span>DAG ACTIVE</span>
           </div>
         </div>
 
         {/* View Tabs */}
-        <div className="grid grid-cols-4 gap-1 bg-[#071510] p-1 rounded-lg border border-[rgba(16,185,129,0.15)] text-[10px] font-mono">
+        <div className="grid grid-cols-4 gap-1 bg-[#F1F5F9] dark:bg-[#071510] p-1 rounded-lg border border-[#E2E8F0] dark:border-[rgba(16,185,129,0.15)] text-[10px] font-mono">
           <button
             id="tab-versions"
             onClick={() => setActiveTab('versions')}
             className={`py-1 px-1 rounded text-center transition-all cursor-pointer flex items-center justify-center gap-1 ${
               activeTab === 'versions'
-                ? 'bg-[#00F5A0] text-[#030A07] font-bold shadow-[0_0_8px_rgba(0,245,160,0.3)]'
-                : 'text-[#8CA89E] hover:text-[#F0FDF4]'
+                ? 'bg-[#0284C7] text-white dark:bg-[#00F5A0] dark:text-[#030A07] font-bold shadow-xs'
+                : 'text-[#64748B] hover:text-[#0F172A] dark:text-[#8CA89E] dark:hover:text-[#F0FDF4]'
             }`}
           >
             <span>Versions</span>
             <span
               className={`text-[9px] px-1 rounded font-bold ${
                 activeTab === 'versions'
-                  ? 'bg-[#030A07]/30 text-[#030A07]'
-                  : 'bg-[#102B21] text-[#00F5A0]'
+                  ? 'bg-white/20 text-white dark:bg-[#030A07]/30 dark:text-[#030A07]'
+                  : 'bg-slate-200 text-[#475569] dark:bg-[#102B21] dark:text-[#00F5A0]'
               }`}
             >
               {versions.length}
@@ -278,8 +278,8 @@ export const DesignHistory: React.FC<DesignHistoryProps> = ({
             onClick={() => setActiveTab('tree')}
             className={`py-1 px-1 rounded text-center transition-all cursor-pointer ${
               activeTab === 'tree'
-                ? 'bg-[#00F5A0] text-[#030A07] font-bold shadow-[0_0_8px_rgba(0,245,160,0.3)]'
-                : 'text-[#8CA89E] hover:text-[#F0FDF4]'
+                ? 'bg-[#0284C7] text-white dark:bg-[#00F5A0] dark:text-[#030A07] font-bold shadow-xs'
+                : 'text-[#64748B] hover:text-[#0F172A] dark:text-[#8CA89E] dark:hover:text-[#F0FDF4]'
             }`}
           >
             Tree
@@ -289,8 +289,8 @@ export const DesignHistory: React.FC<DesignHistoryProps> = ({
             onClick={() => setActiveTab('direct_edit')}
             className={`py-1 px-1 rounded text-center transition-all cursor-pointer ${
               activeTab === 'direct_edit'
-                ? 'bg-[#00F5A0] text-[#030A07] font-bold shadow-[0_0_8px_rgba(0,245,160,0.3)]'
-                : 'text-[#8CA89E] hover:text-[#F0FDF4]'
+                ? 'bg-[#0284C7] text-white dark:bg-[#00F5A0] dark:text-[#030A07] font-bold shadow-xs'
+                : 'text-[#64748B] hover:text-[#0F172A] dark:text-[#8CA89E] dark:hover:text-[#F0FDF4]'
             }`}
           >
             Direct
@@ -300,8 +300,8 @@ export const DesignHistory: React.FC<DesignHistoryProps> = ({
             onClick={() => setActiveTab('brep')}
             className={`py-1 px-1 rounded text-center transition-all cursor-pointer ${
               activeTab === 'brep'
-                ? 'bg-[#00F5A0] text-[#030A07] font-bold shadow-[0_0_8px_rgba(0,245,160,0.3)]'
-                : 'text-[#8CA89E] hover:text-[#F0FDF4]'
+                ? 'bg-[#0284C7] text-white dark:bg-[#00F5A0] dark:text-[#030A07] font-bold shadow-xs'
+                : 'text-[#64748B] hover:text-[#0F172A] dark:text-[#8CA89E] dark:hover:text-[#F0FDF4]'
             }`}
           >
             B-Rep
@@ -310,13 +310,13 @@ export const DesignHistory: React.FC<DesignHistoryProps> = ({
       </div>
 
       {/* Incremental Recompute Telemetry Bar */}
-      <div className="px-3 py-1.5 bg-[#0B1E17] border-b border-[rgba(16,185,129,0.15)] flex items-center justify-between text-[10px] font-mono text-[#8CA89E]">
+      <div className="px-3 py-1.5 bg-[#F8FAFC] dark:bg-[#0B1E17] border-b border-[#E2E8F0] dark:border-[rgba(16,185,129,0.15)] flex items-center justify-between text-[10px] font-mono text-[#64748B] dark:text-[#8CA89E]">
         <div className="flex items-center gap-1.5">
-          <RefreshCw className="w-3 h-3 text-[#00F5A0] animate-spin-slow" />
-          <span>Incremental: <strong className="text-[#00F5A0]">{lastRecomputeStats.timeMs} ms</strong></span>
+          <RefreshCw className="w-3 h-3 text-[#0284C7] dark:text-[#00F5A0] animate-spin-slow" />
+          <span>Incremental: <strong className="text-[#0284C7] dark:text-[#00F5A0]">{lastRecomputeStats.timeMs} ms</strong></span>
         </div>
         <div>
-          <span>Saved: <strong className="text-[#00F5A0]">{lastRecomputeStats.savedMs} ms</strong> (Lazy DAG)</span>
+          <span>Saved: <strong className="text-[#0284C7] dark:text-[#00F5A0]">{lastRecomputeStats.savedMs} ms</strong> (Lazy DAG)</span>
         </div>
       </div>
 

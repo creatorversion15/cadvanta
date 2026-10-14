@@ -1,17 +1,18 @@
 import * as THREE from 'three';
 import { CADPart, AssemblyComponent } from '../types/cad';
 import { getMaterialById } from '../materials/materialsDatabase';
+import { generateSheetMetal3D, SheetMetalParameters } from '../engine/sheetMetalEngine';
 
 // Helper to create clean metallic PBR materials
 export function createCADMaterial(
-  colorHex: string | number,
-  roughness: number = 0.3,
-  metalness: number = 0.85,
+  colorHex: string | number = '#F5F5F5',
+  roughness: number = 0.45,
+  metalness: number = 0.1,
   opacity: number = 1.0,
   wireframe: boolean = false
 ): THREE.MeshStandardMaterial {
   return new THREE.MeshStandardMaterial({
-    color: new THREE.Color(colorHex),
+    color: new THREE.Color(colorHex || '#F5F5F5'),
     roughness: roughness,
     metalness: metalness,
     transparent: opacity < 1.0,
@@ -558,124 +559,236 @@ export function generateBracket3D(part: CADPart): THREE.Group {
   return group;
 }
 
-// 9. PLANETARY GEARBOX ASSEMBLY (Test Scenario 2)
+// 9. PLANETARY GEARBOX ASSEMBLY (Industry-Grade 3-Stage Epicyclic Reducer)
 export function generatePlanetaryGearbox3D(part: CADPart): THREE.Group {
   const group = new THREE.Group();
   group.name = 'PlanetaryGearboxAssembly';
   const p = part.parameters;
 
-  const housingMat = createCADMaterial('#475569', 0.45, 0.7, 0.85); // Transparent casing
-  const sunMat = createCADMaterial('#eab308', 0.25, 0.9); // Gold/Bronze Sun
-  const planetMat = createCADMaterial('#cbd5e1', 0.25, 0.9); // Hardened Steel Planets
-  const carrierMat = createCADMaterial('#0284c7', 0.3, 0.8); // Anodized Blue Carrier
-  const shaftMat = createCADMaterial('#94a3b8', 0.2, 0.95);
-  const boltMat = createCADMaterial('#1e293b', 0.3, 0.8);
+  // Material shaders
+  // Requirement 1 & 5: partColor variable with default #F5F5F5, metalness 0.1, roughness 0.45
+  const partColor = (p?.part_color as string) || '#F5F5F5';
+  const satinWhiteMat = createCADMaterial(partColor, 0.45, 0.1); // White satin finish for outer structural parts
 
-  const stageCount = Number(p.stages || 2);
-  const ringDia = Number(p.ring_diameter || 120);
+  const housingMat = satinWhiteMat; // Main housing (clean white satin)
+  const housingSolidMat = satinWhiteMat; // Solid Flanges (clean white satin)
+  const ringGearMat = createCADMaterial('#334155', 0.25, 0.9); // Nitrided AISI 4140 Ring Gear
+  const sunMat = createCADMaterial('#f59e0b', 0.2, 0.95); // Induction Hardened AISI 4140 Sun Gears (Golden/Bronze)
+  const planetMat = createCADMaterial('#cbd5e1', 0.18, 0.95); // Ground Hardened Steel Planets
+  const carrierMat = createCADMaterial('#0284c7', 0.28, 0.85); // High-Rigidity Anodized Blue Carriers
+  const shaftMat = satinWhiteMat; // Concentric Output Shaft (clean white satin)
+  const bearingMat = createCADMaterial('#475569', 0.15, 0.95); // Bearing Steel 100Cr6
+  const sealMat = createCADMaterial('#0f172a', 0.7, 0.3); // NBR Rubber Oil Seals
+  const circlipMat = createCADMaterial('#1e293b', 0.25, 0.9); // Spring Steel Retaining Rings
+  const boltMat = satinWhiteMat; // Fasteners & Bolt Holes (clean white satin)
+
+  // Parameters
+  const stageCount = Number(p.stages || 3);
+  const ringDia = Number(p.ring_diameter || 240); // 240mm OD
   const ringRadius = ringDia / 2;
-  const housingLen = Number(p.length || (stageCount === 2 ? 140 : 90));
-  const sunTeeth = Number(p.sun_teeth || 16);
-  const planetTeeth = Number(p.planet_teeth || 20);
-  const moduleVal = 2.0;
+  const housingLen = Number(p.length || 260); // 260mm total body length
+  const sunTeeth = Number(p.sun_teeth || 30);
+  const planetTeeth = Number(p.planet_teeth || 30);
+  const moduleVal = Number(p.module || 2.5); // Module 2.5
 
-  const sunRadius = (moduleVal * sunTeeth) / 2;
-  const planetRadius = (moduleVal * planetTeeth) / 2;
-  const orbitRadius = sunRadius + planetRadius;
+  const sunRadius = (moduleVal * sunTeeth) / 2; // 37.5 mm
+  const planetRadius = (moduleVal * planetTeeth) / 2; // 37.5 mm
+  const orbitRadius = sunRadius + planetRadius; // 75.0 mm pitch circle
   const numPlanets = 3;
 
-  // 1. External Cylindrical Housing Ring Gear
-  const housingShape = new THREE.Shape();
-  housingShape.absarc(0, 0, ringRadius, 0, Math.PI * 2, false);
-  const innerCut = new THREE.Path();
-  innerCut.absarc(0, 0, ringRadius - 12, 0, Math.PI * 2, true);
-  housingShape.holes.push(innerCut);
+  // Exploded separation offset multiplier (0 to 1)
+  const expFactor = Number(p.exploded_factor ?? (part as any).explodedProgress ?? 0);
+  const axialExp = expFactor * 80; // axial separation
+  const radialExp = expFactor * 25; // radial planet expansion
 
-  const housingGeo = new THREE.ExtrudeGeometry(housingShape, { depth: housingLen, bevelEnabled: true, bevelThickness: 2, bevelSize: 1 });
-  housingGeo.center();
-  const housingMesh = new THREE.Mesh(housingGeo, housingMat);
-  group.add(housingMesh);
+  // -------------------------------------------------------------
+  // 1. SPLIT ALUMINUM HOUSING (Front Half & Rear Flange Half)
+  // -------------------------------------------------------------
+  // Front Housing Half (Z negative)
+  const frontHsgLen = housingLen / 2;
+  const frontHsgShape = new THREE.Shape();
+  frontHsgShape.absarc(0, 0, ringRadius, 0, Math.PI * 2, false);
+  const frontInnerCut = new THREE.Path();
+  frontInnerCut.absarc(0, 0, ringRadius - 14, 0, Math.PI * 2, true);
+  frontHsgShape.holes.push(frontInnerCut);
 
-  // 2. Input Shaft & Sun Gear 1
-  const inputShaftGeo = new THREE.CylinderGeometry(9, 9, 50, 32);
-  inputShaftGeo.rotateX(Math.PI / 2);
-  const inputShaft = new THREE.Mesh(inputShaftGeo, shaftMat);
-  inputShaft.position.z = -housingLen / 2 - 20;
-  group.add(inputShaft);
+  const frontHsgGeo = new THREE.ExtrudeGeometry(frontHsgShape, {
+    depth: frontHsgLen,
+    bevelEnabled: true,
+    bevelThickness: 2,
+    bevelSize: 1,
+  });
+  frontHsgGeo.center();
+  const frontHsgMesh = new THREE.Mesh(frontHsgGeo, housingMat);
+  frontHsgMesh.position.z = -frontHsgLen / 2 - axialExp * 1.5;
+  group.add(frontHsgMesh);
 
-  const sun1Geo = new THREE.CylinderGeometry(sunRadius, sunRadius, 18, 24);
-  sun1Geo.rotateX(Math.PI / 2);
-  const sun1Mesh = new THREE.Mesh(sun1Geo, sunMat);
-  sun1Mesh.position.z = -housingLen / 4;
-  group.add(sun1Mesh);
+  // Front Mounting Faceplate Flange with 8x M8 Bolt Holes
+  const frontFlangeGeo = new THREE.CylinderGeometry(ringRadius + 18, ringRadius + 18, 16, 48);
+  frontFlangeGeo.rotateX(Math.PI / 2);
+  const frontFlangeMesh = new THREE.Mesh(frontFlangeGeo, housingSolidMat);
+  frontFlangeMesh.position.z = -housingLen / 2 - axialExp * 1.8;
+  group.add(frontFlangeMesh);
 
-  // 3. Stage 1 Planet Gears (3x)
-  for (let i = 0; i < numPlanets; i++) {
-    const angle = (i / numPlanets) * Math.PI * 2;
-    const px = Math.cos(angle) * orbitRadius;
-    const py = Math.sin(angle) * orbitRadius;
+  // Rear Housing Half (Z positive)
+  const rearHsgLen = housingLen / 2;
+  const rearHsgGeo = new THREE.ExtrudeGeometry(frontHsgShape, {
+    depth: rearHsgLen,
+    bevelEnabled: true,
+    bevelThickness: 2,
+    bevelSize: 1,
+  });
+  rearHsgGeo.center();
+  const rearHsgMesh = new THREE.Mesh(rearHsgGeo, housingMat);
+  rearHsgMesh.position.z = rearHsgLen / 2 + axialExp * 1.5;
+  group.add(rearHsgMesh);
 
-    const pGeo = new THREE.CylinderGeometry(planetRadius, planetRadius, 16, 24);
-    pGeo.rotateX(Math.PI / 2);
-    const pMesh = new THREE.Mesh(pGeo, planetMat);
-    pMesh.position.set(px, py, -housingLen / 4);
-    group.add(pMesh);
+  // Split Flange Split Ring Clamping Bolts (12x M8 on PCD 255mm)
+  for (let b = 0; b < 12; b++) {
+    const bAngle = (b / 12) * Math.PI * 2;
+    const bx = Math.cos(bAngle) * (ringRadius + 8);
+    const by = Math.sin(bAngle) * (ringRadius + 8);
 
-    // Planet Pin
-    const pinGeo = new THREE.CylinderGeometry(4, 4, 28, 16);
-    pinGeo.rotateX(Math.PI / 2);
-    const pinMesh = new THREE.Mesh(pinGeo, boltMat);
-    pinMesh.position.set(px, py, -housingLen / 4);
-    group.add(pinMesh);
+    const boltGeo = new THREE.CylinderGeometry(4.5, 4.5, 24, 16);
+    boltGeo.rotateX(Math.PI / 2);
+    const boltMesh = new THREE.Mesh(boltGeo, boltMat);
+    boltMesh.position.set(bx, by, 0);
+    group.add(boltMesh);
   }
 
-  // 4. Stage 1 Planet Carrier Disc
-  const carrier1Geo = new THREE.CylinderGeometry(orbitRadius + 8, orbitRadius + 8, 8, 32);
-  carrier1Geo.rotateX(Math.PI / 2);
-  const carrier1Mesh = new THREE.Mesh(carrier1Geo, carrierMat);
-  carrier1Mesh.position.z = -housingLen / 4 + 12;
-  group.add(carrier1Mesh);
+  // Internal Fixed Ring Gear (Z=90, PCD 225mm)
+  const ringGearShape = new THREE.Shape();
+  ringGearShape.absarc(0, 0, ringRadius - 13.5, 0, Math.PI * 2, false);
+  const ringToothCut = new THREE.Path();
+  ringToothCut.absarc(0, 0, 112.5, 0, Math.PI * 2, true);
+  ringGearShape.holes.push(ringToothCut);
+  const ringGearGeo = new THREE.ExtrudeGeometry(ringGearShape, { depth: housingLen - 20, bevelEnabled: false });
+  ringGearGeo.center();
+  const ringGearMesh = new THREE.Mesh(ringGearGeo, ringGearMat);
+  group.add(ringGearMesh);
 
-  // 5. Stage 2 Cascade (if two-stage)
-  if (stageCount >= 2) {
-    const sun2Geo = new THREE.CylinderGeometry(sunRadius * 1.1, sunRadius * 1.1, 18, 24);
-    sun2Geo.rotateX(Math.PI / 2);
-    const sun2Mesh = new THREE.Mesh(sun2Geo, sunMat);
-    sun2Mesh.position.z = housingLen / 4;
-    group.add(sun2Mesh);
+  // -------------------------------------------------------------
+  // 2. CONCENTRIC SHAFTS & SKF BEARINGS & SEALS
+  // -------------------------------------------------------------
+  // High-Speed Input Shaft Ø32mm with Keyway
+  const inShaftGeo = new THREE.CylinderGeometry(16, 16, 75, 32);
+  inShaftGeo.rotateX(Math.PI / 2);
+  const inShaft = new THREE.Mesh(inShaftGeo, shaftMat);
+  inShaft.position.z = -housingLen / 2 - 38 - axialExp * 2.0;
+  group.add(inShaft);
 
-    for (let i = 0; i < numPlanets; i++) {
-      const angle = (i / numPlanets) * Math.PI * 2 + Math.PI / 3;
-      const px = Math.cos(angle) * orbitRadius;
-      const py = Math.sin(angle) * orbitRadius;
+  // SKF 6208 Deep Groove Ball Bearing (Input side Ø40xØ80x18mm)
+  const skf6208Geo = new THREE.CylinderGeometry(40, 40, 18, 36);
+  skf6208Geo.rotateX(Math.PI / 2);
+  const skf6208 = new THREE.Mesh(skf6208Geo, bearingMat);
+  skf6208.position.z = -housingLen / 2 + 10 - axialExp * 1.6;
+  group.add(skf6208);
 
-      const p2Geo = new THREE.CylinderGeometry(planetRadius, planetRadius, 18, 24);
-      p2Geo.rotateX(Math.PI / 2);
-      const p2Mesh = new THREE.Mesh(p2Geo, planetMat);
-      p2Mesh.position.set(px, py, housingLen / 4);
-      group.add(p2Mesh);
+  // Retaining Circlip DIN 471 (Input)
+  const circlip1Geo = new THREE.TorusGeometry(17, 1.5, 8, 32);
+  const circlip1 = new THREE.Mesh(circlip1Geo, circlipMat);
+  circlip1.position.z = -housingLen / 2 - 5 - axialExp * 1.9;
+  group.add(circlip1);
+
+  // Radial NBR Oil Seal 45x65x8mm (Input)
+  const seal1Geo = new THREE.CylinderGeometry(32.5, 32.5, 8, 32);
+  seal1Geo.rotateX(Math.PI / 2);
+  const seal1 = new THREE.Mesh(seal1Geo, sealMat);
+  seal1.position.z = -housingLen / 2 - 20 - axialExp * 1.95;
+  group.add(seal1);
+
+  // Concentric High-Torque Output Shaft Ø65mm
+  const outShaftGeo = new THREE.CylinderGeometry(32.5, 32.5, 85, 36);
+  outShaftGeo.rotateX(Math.PI / 2);
+  const outShaft = new THREE.Mesh(outShaftGeo, shaftMat);
+  outShaft.position.z = housingLen / 2 + 42 + axialExp * 2.0;
+  group.add(outShaft);
+
+  // SKF 6310 Heavy Duty Output Bearing (Ø50xØ110x27mm)
+  const skf6310Geo = new THREE.CylinderGeometry(55, 55, 27, 40);
+  skf6310Geo.rotateX(Math.PI / 2);
+  const skf6310 = new THREE.Mesh(skf6310Geo, bearingMat);
+  skf6310.position.z = housingLen / 2 - 12 + axialExp * 1.6;
+  group.add(skf6310);
+
+  // Radial NBR Oil Seal (Output)
+  const seal2Geo = new THREE.CylinderGeometry(40, 40, 9, 32);
+  seal2Geo.rotateX(Math.PI / 2);
+  const seal2 = new THREE.Mesh(seal2Geo, sealMat);
+  seal2.position.z = housingLen / 2 + 15 + axialExp * 1.95;
+  group.add(seal2);
+
+  // -------------------------------------------------------------
+  // 3. 3-STAGE PLANETARY GEARSETS (STAGE 1, STAGE 2, STAGE 3)
+  // -------------------------------------------------------------
+  const stageZPositions = [
+    -housingLen / 3, // Stage 1 (High Speed, Ratio 4:1)
+    0, // Stage 2 (Intermediate, Ratio 4:1)
+    housingLen / 3, // Stage 3 (Output High Torque, Ratio 4:1)
+  ];
+
+  const stageSeparation = [
+    -axialExp * 0.8,
+    0,
+    axialExp * 0.8,
+  ];
+
+  for (let s = 0; s < 3; s++) {
+    const stageZ = stageZPositions[s] + stageSeparation[s];
+    const toothFaceWidth = 20 + s * 5; // Stage 1=20mm, Stage 2=25mm, Stage 3=30mm
+
+    // Sun Gear (Z=30, PCD 75mm, Module 2.5)
+    const sGeo = new THREE.CylinderGeometry(sunRadius, sunRadius, toothFaceWidth, 32);
+    sGeo.rotateX(Math.PI / 2);
+    const sMesh = new THREE.Mesh(sGeo, sunMat);
+    sMesh.position.z = stageZ;
+    group.add(sMesh);
+
+    // Planet Gears Cluster (3x at 120° on Orbit Radius 75mm)
+    const basePhase = (s * Math.PI) / 3;
+    for (let pIdx = 0; pIdx < numPlanets; pIdx++) {
+      const pAngle = basePhase + (pIdx / numPlanets) * Math.PI * 2;
+      const curOrbit = orbitRadius + radialExp;
+      const px = Math.cos(pAngle) * curOrbit;
+      const py = Math.sin(pAngle) * curOrbit;
+
+      // Planet Gear Body
+      const pGeo = new THREE.CylinderGeometry(planetRadius, planetRadius, toothFaceWidth - 2, 28);
+      pGeo.rotateX(Math.PI / 2);
+      const pMesh = new THREE.Mesh(pGeo, planetMat);
+      pMesh.position.set(px, py, stageZ);
+      group.add(pMesh);
+
+      // Precision Ground Planet Pin
+      const pinGeo = new THREE.CylinderGeometry(7, 7, toothFaceWidth + 14, 16);
+      pinGeo.rotateX(Math.PI / 2);
+      const pinMesh = new THREE.Mesh(pinGeo, shaftMat);
+      pinMesh.position.set(px, py, stageZ);
+      group.add(pinMesh);
+
+      // Internal Needle Roller Bearing Visualizer
+      const needleGeo = new THREE.CylinderGeometry(11, 11, toothFaceWidth - 6, 20);
+      needleGeo.rotateX(Math.PI / 2);
+      const needleMesh = new THREE.Mesh(needleGeo, bearingMat);
+      needleMesh.position.set(px, py, stageZ);
+      group.add(needleMesh);
     }
 
-    const carrier2Geo = new THREE.CylinderGeometry(orbitRadius + 10, orbitRadius + 10, 10, 32);
-    carrier2Geo.rotateX(Math.PI / 2);
-    const carrier2Mesh = new THREE.Mesh(carrier2Geo, carrierMat);
-    carrier2Mesh.position.z = housingLen / 4 + 14;
-    group.add(carrier2Mesh);
+    // Planet Carrier Assembly (Dual-Plate Rigid Structural Cage)
+    const carrierPlateRadius = orbitRadius + 16;
+    const carrierPlateGeo = new THREE.CylinderGeometry(carrierPlateRadius, carrierPlateRadius, 8, 36);
+    carrierPlateGeo.rotateX(Math.PI / 2);
+
+    // Front Carrier Disc
+    const carrierFront = new THREE.Mesh(carrierPlateGeo, carrierMat);
+    carrierFront.position.z = stageZ - toothFaceWidth / 2 - 5 - (expFactor * 8);
+    group.add(carrierFront);
+
+    // Rear Carrier Disc & Output Transfer Stub
+    const carrierRear = new THREE.Mesh(carrierPlateGeo, carrierMat);
+    carrierRear.position.z = stageZ + toothFaceWidth / 2 + 5 + (expFactor * 8);
+    group.add(carrierRear);
   }
-
-  // 6. High-Torque Output Shaft with Keyway
-  const outputShaftGeo = new THREE.CylinderGeometry(16, 16, 60, 32);
-  outputShaftGeo.rotateX(Math.PI / 2);
-  const outputShaft = new THREE.Mesh(outputShaftGeo, shaftMat);
-  outputShaft.position.z = housingLen / 2 + 25;
-  group.add(outputShaft);
-
-  // End Flange Mount & Fasteners
-  const endFlangeGeo = new THREE.CylinderGeometry(ringRadius + 8, ringRadius + 8, 12, 32);
-  endFlangeGeo.rotateX(Math.PI / 2);
-  const endFlange = new THREE.Mesh(endFlangeGeo, housingMat);
-  endFlange.position.z = -housingLen / 2;
-  group.add(endFlange);
 
   return group;
 }
@@ -2933,8 +3046,229 @@ export function generatePressureVessel3D(part: CADPart): THREE.Group {
   return group;
 }
 
+/**
+ * Converts 2D Sketch entities into a valid THREE.Shape with hole detection
+ */
+export function buildShapeFromEntities(entities: any[]): THREE.Shape {
+  const shape = new THREE.Shape();
+  if (!entities || entities.length === 0) {
+    shape.moveTo(-60, -35);
+    shape.lineTo(60, -35);
+    shape.lineTo(60, 35);
+    shape.lineTo(-60, 35);
+    shape.closePath();
+    return shape;
+  }
+
+  const rects = entities.filter((e) => e.type === 'rectangle' && (e.width || e.height));
+  const circles = entities
+    .filter((e) => e.type === 'circle' && (e.radius || 0) > 0)
+    .sort((a, b) => (Number(b.radius) || 0) - (Number(a.radius) || 0));
+  const lines = entities.filter((e) => e.type === 'line' && e.endX !== undefined && e.endY !== undefined);
+
+  // 1. Rectangle profile (outer) with holes
+  if (rects.length > 0) {
+    const mainRect = rects.sort(
+      (a, b) => (Number(b.width || 80) * Number(b.height || 50)) - (Number(a.width || 80) * Number(a.height || 50))
+    )[0];
+    const x = Number(mainRect.startX || 0);
+    const y = Number(mainRect.startY || 0);
+    const w = Number(mainRect.width || 80);
+    const h = Number(mainRect.height || 50);
+
+    shape.moveTo(x, y);
+    shape.lineTo(x + w, y);
+    shape.lineTo(x + w, y + h);
+    shape.lineTo(x, y + h);
+    shape.closePath();
+
+    // Nested circles become holes
+    circles.forEach((c) => {
+      const hole = new THREE.Path();
+      const r = Math.max(2, Number(c.radius || 10));
+      hole.absarc(Number(c.startX || 0), Number(c.startY || 0), r, 0, Math.PI * 2, true);
+      shape.holes.push(hole);
+    });
+
+    return shape;
+  }
+
+  // 2. Standalone circle profile (or concentric circle flange / bushing)
+  if (circles.length > 0 && lines.length < 3) {
+    const mainCircle = circles[0];
+    const r = Math.max(5, Number(mainCircle.radius || 40));
+    shape.absarc(Number(mainCircle.startX || 0), Number(mainCircle.startY || 0), r, 0, Math.PI * 2, false);
+
+    // All smaller circles inside become holes
+    for (let i = 1; i < circles.length; i++) {
+      const c = circles[i];
+      const hole = new THREE.Path();
+      const hr = Math.max(2, Number(c.radius || 15));
+      hole.absarc(Number(c.startX || 0), Number(c.startY || 0), hr, 0, Math.PI * 2, true);
+      shape.holes.push(hole);
+    }
+    return shape;
+  }
+
+  // 3. Line loop profile with continuous endpoint chaining
+  if (lines.length >= 3) {
+    // Chain line segments so endpoints match in sequence
+    const orderedPoints: { x: number; y: number }[] = [];
+    const remaining = [...lines];
+    let currentPt = { x: Number(lines[0].startX || 0), y: Number(lines[0].startY || 0) };
+    orderedPoints.push(currentPt);
+
+    while (remaining.length > 0) {
+      let bestIdx = -1;
+      let minDst = Infinity;
+      let reverse = false;
+
+      for (let i = 0; i < remaining.length; i++) {
+        const seg = remaining[i];
+        const sx = Number(seg.startX || 0);
+        const sy = Number(seg.startY || 0);
+        const ex = Number(seg.endX !== undefined ? seg.endX : sx);
+        const ey = Number(seg.endY !== undefined ? seg.endY : sy);
+
+        const dStart = Math.hypot(sx - currentPt.x, sy - currentPt.y);
+        const dEnd = Math.hypot(ex - currentPt.x, ey - currentPt.y);
+
+        if (dStart < minDst) {
+          minDst = dStart;
+          bestIdx = i;
+          reverse = false;
+        }
+        if (dEnd < minDst) {
+          minDst = dEnd;
+          bestIdx = i;
+          reverse = true;
+        }
+      }
+
+      if (bestIdx === -1 || minDst > 60) {
+        remaining.forEach((r) =>
+          orderedPoints.push({
+            x: Number(r.endX !== undefined ? r.endX : r.startX),
+            y: Number(r.endY !== undefined ? r.endY : r.startY),
+          })
+        );
+        break;
+      }
+
+      const chosen = remaining.splice(bestIdx, 1)[0];
+      const nextPt = reverse
+        ? { x: Number(chosen.startX || 0), y: Number(chosen.startY || 0) }
+        : {
+            x: Number(chosen.endX !== undefined ? chosen.endX : chosen.startX),
+            y: Number(chosen.endY !== undefined ? chosen.endY : chosen.startY),
+          };
+      orderedPoints.push(nextPt);
+      currentPt = nextPt;
+    }
+
+    if (orderedPoints.length >= 3) {
+      shape.moveTo(orderedPoints[0].x, orderedPoints[0].y);
+      for (let i = 1; i < orderedPoints.length; i++) {
+        shape.lineTo(orderedPoints[i].x, orderedPoints[i].y);
+      }
+      shape.closePath();
+
+      // Inner circle holes
+      circles.forEach((c) => {
+        const hole = new THREE.Path();
+        const r = Math.max(2, Number(c.radius || 10));
+        hole.absarc(Number(c.startX || 0), Number(c.startY || 0), r, 0, Math.PI * 2, true);
+        shape.holes.push(hole);
+      });
+
+      return shape;
+    }
+  }
+
+  // 4. Bounding box fallback
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  entities.forEach((e) => {
+    minX = Math.min(minX, Number(e.startX || 0), Number(e.endX ?? e.startX ?? 0));
+    maxX = Math.max(maxX, Number(e.startX || 0), Number(e.endX ?? e.startX ?? 0));
+    minY = Math.min(minY, Number(e.startY || 0), Number(e.endY ?? e.startY ?? 0));
+    maxY = Math.max(maxY, Number(e.startY || 0), Number(e.endY ?? e.startY ?? 0));
+  });
+
+  if (isFinite(minX) && maxX > minX && maxY > minY) {
+    shape.moveTo(minX, minY);
+    shape.lineTo(maxX, minY);
+    shape.lineTo(maxX, maxY);
+    shape.lineTo(minX, maxY);
+    shape.closePath();
+    return shape;
+  }
+
+  // Default plate
+  shape.moveTo(-60, -35);
+  shape.lineTo(60, -35);
+  shape.lineTo(60, 35);
+  shape.lineTo(-60, 35);
+  shape.closePath();
+  return shape;
+}
+
+/**
+ * 26. Real Parametric 2D Sketch to 3D Solid Extrusion Generator
+ */
+export function generateSketchExtrusion3D(part: CADPart): THREE.Group {
+  const group = new THREE.Group();
+  group.name = 'CustomSketchExtrusionPart';
+  const p = part.parameters || {};
+  const extrudeData = part.custom_extrusion;
+
+  const depth = Math.max(2, Number(extrudeData?.depth || p.extrusion_depth || p.depth || p.length || 40));
+  const direction = extrudeData?.direction || p.extrusion_direction || 'blind';
+  const plane = extrudeData?.plane || p.sketch_plane || 'XZ';
+
+  const shape = buildShapeFromEntities(extrudeData?.entities || []);
+
+  const extrudeSettings: THREE.ExtrudeGeometryOptions = {
+    depth: depth,
+    bevelEnabled: true,
+    bevelSegments: 3,
+    steps: 1,
+    bevelSize: Math.min(2, depth * 0.05),
+    bevelThickness: Math.min(2, depth * 0.05),
+  };
+
+  const geo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+
+  // Center according to direction
+  if (direction === 'symmetric') {
+    geo.translate(0, 0, -depth / 2);
+  } else if (direction === 'reverse') {
+    geo.translate(0, 0, -depth);
+  }
+
+  // Align with active datum plane
+  if (plane === 'XZ') {
+    geo.rotateX(-Math.PI / 2);
+  } else if (plane === 'YZ') {
+    geo.rotateY(Math.PI / 2);
+  }
+
+  const partColor = (p.part_color as string) || part.material?.color || '#F5F5F5';
+  const mat = createCADMaterial(partColor, part.material?.roughness ?? 0.45, part.material?.metalness ?? 0.1);
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  group.add(mesh);
+
+  return group;
+}
+
 // Universal Entry Dispatcher
 export function generateCADModel3D(part: CADPart): THREE.Group {
+  // If custom sketch extrusion is present
+  if (part.part_type === 'sketch_extrusion' || part.custom_extrusion) {
+    return generateSketchExtrusion3D(part);
+  }
+
   switch (part.part_type) {
     case 'shaft':
     case 'stepped_shaft':
@@ -3101,7 +3435,56 @@ export function generateCADModel3D(part: CADPart): THREE.Group {
     case 'clutch_pack':
       return generateClutchPack3D(part);
 
+    case 'sheet_metal': {
+      const p = part.parameters || {};
+      const smParams: SheetMetalParameters = {
+        thickness: Number(p.sheet_metal_thickness || p.thickness || 2.0),
+        bendRadius: Number(p.bend_radius || 2.0),
+        kFactor: Number(p.k_factor || 0.44),
+        baseLength: Number(p.base_length || p.length || p.width || 140),
+        baseWidth: Number(p.base_width || p.height || 90),
+        flangeLeftLength: Number(p.flange_left_length || (p.flange_length ? p.flange_length : 0)),
+        flangeLeftAngle: Number(p.flange_left_angle || 90),
+        flangeRightLength: Number(p.flange_right_length || 0),
+        flangeRightAngle: Number(p.flange_right_angle || 90),
+        flangeTopLength: Number(p.flange_top_length || 0),
+        flangeTopAngle: Number(p.flange_top_angle || 90),
+        flangeBottomLength: Number(p.flange_bottom_length || 0),
+        flangeBottomAngle: Number(p.flange_bottom_angle || 90),
+        reliefType: (p.relief_type as any) || 'rectangular',
+        reliefWidth: Number(p.relief_width || 3.0),
+        reliefDepth: Number(p.relief_depth || 4.0),
+        isFlattened: Boolean(p.is_flattened),
+        cutouts: p.cutouts,
+        louvers: p.louvers,
+      };
+      return generateSheetMetal3D(smParams, part.material?.color || '#38bdf8');
+    }
+
     default:
+      // If sheet metal parameters are present, render as sheet metal
+      if (part.parameters?.sheet_metal_thickness || part.features?.some((f) => f.type === 'bend' || f.type === 'flange')) {
+        const p = part.parameters || {};
+        const smParams: SheetMetalParameters = {
+          thickness: Number(p.sheet_metal_thickness || p.thickness || 2.0),
+          bendRadius: Number(p.bend_radius || 2.0),
+          kFactor: Number(p.k_factor || 0.44),
+          baseLength: Number(p.base_length || p.length || 140),
+          baseWidth: Number(p.base_width || p.width || 90),
+          flangeLeftLength: Number(p.flange_left_length || 0),
+          flangeLeftAngle: Number(p.flange_left_angle || 90),
+          flangeRightLength: Number(p.flange_right_length || 0),
+          flangeRightAngle: Number(p.flange_right_angle || 90),
+          reliefType: (p.relief_type as any) || 'rectangular',
+          reliefWidth: Number(p.relief_width || 3.0),
+          reliefDepth: Number(p.relief_depth || 4.0),
+          isFlattened: Boolean(p.is_flattened),
+          cutouts: p.cutouts,
+          louvers: p.louvers,
+        };
+        return generateSheetMetal3D(smParams, part.material?.color || '#38bdf8');
+      }
+      // Solid Box Plate / Cylinder fallback
       // Solid Box Plate / Cylinder fallback
       if (part.parameters.length && part.parameters.width) {
         const shape = new THREE.Shape();

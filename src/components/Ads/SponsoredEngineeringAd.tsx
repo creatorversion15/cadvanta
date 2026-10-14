@@ -86,14 +86,14 @@ export const SponsoredEngineeringAd: React.FC<SponsoredEngineeringAdProps> = ({ 
 
   return (
     <div className="w-full max-w-5xl mt-12 space-y-4 relative z-10">
-      <div className="flex items-center justify-between px-1">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-1">
         <div className="flex items-center gap-2">
-          <Zap className="w-4 h-4 text-[#00F5A0]" />
-          <h2 className="text-sm font-bold font-mono text-[#F0FDF4] uppercase tracking-wider">
+          <Zap className="w-4 h-4 text-[#00F5A0] shrink-0" />
+          <h2 className="text-xs sm:text-sm font-bold font-mono text-[#F0FDF4] uppercase tracking-wider">
             Sponsored Industry Solutions & Protected Partner Portals
           </h2>
         </div>
-        <span className="text-[10px] font-mono text-[#8CA89E] uppercase tracking-wider px-2 py-0.5 rounded bg-[#102B21] border border-[#00F5A0]/30 text-[#00F5A0]">
+        <span className="self-start sm:self-auto text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded bg-[#102B21] border border-[#00F5A0]/30 text-[#00F5A0] shrink-0">
           Verified Industry Content
         </span>
       </div>

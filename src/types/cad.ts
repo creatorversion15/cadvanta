@@ -65,6 +65,7 @@ export type PartType =
   | 'assembly_custom'
   | 'sheet_metal'
   | 'surfacing'
+  | 'sketch_extrusion'
   | 'custom';
 
 export type DisplayMode = 'shaded_edges' | 'shaded' | 'wireframe' | 'xray' | 'exploded' | 'section';
@@ -96,7 +97,7 @@ export interface MaterialInfo {
 export interface FeatureHistoryItem {
   id: string;
   name: string;
-  type: 'base' | 'extrude' | 'revolve' | 'cut' | 'pattern' | 'chamfer' | 'fillet' | 'bore' | 'thread' | 'keyway' | 'gear_teeth' | 'bearing_seat' | 'loft' | 'sweep' | 'bend' | 'flange' | 'custom';
+  type: 'base' | 'extrude' | 'revolve' | 'cut' | 'hole' | 'pattern' | 'chamfer' | 'fillet' | 'bore' | 'thread' | 'keyway' | 'gear_teeth' | 'bearing_seat' | 'loft' | 'sweep' | 'bend' | 'flange' | 'custom';
   description: string;
   parameters: Record<string, any>;
   enabled: boolean;
@@ -141,6 +142,13 @@ export interface CADPart {
   parameters: Record<string, any>;
   material: MaterialInfo;
   features: FeatureHistoryItem[];
+  custom_extrusion?: {
+    entities: any[];
+    depth: number;
+    direction: 'blind' | 'symmetric';
+    operation?: 'boss' | 'cut';
+    plane?: 'XY' | 'XZ' | 'YZ';
+  };
   components?: AssemblyComponent[]; // For multi-component assemblies
   constraints?: AssemblyConstraint[];
   isAssembly?: boolean;
@@ -264,7 +272,19 @@ export interface ModelVersionSnapshot {
   versionTag: string;
   timestamp: number;
   formattedTime: string;
-  actionType: 'param_edit' | 'ai_prompt' | 'preset_change' | 'material_change' | 'manual_snapshot' | 'direct_edit' | 'restore';
+  actionType:
+    | 'param_edit'
+    | 'ai_prompt'
+    | 'preset_change'
+    | 'material_change'
+    | 'manual_snapshot'
+    | 'direct_edit'
+    | 'restore'
+    | 'feature_add'
+    | 'feature_delete'
+    | 'feature_suppress'
+    | 'sketch_extrude'
+    | 'part_insert';
   title: string;
   description?: string;
   part: CADPart;

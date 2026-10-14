@@ -67,11 +67,11 @@ export function buildCADSceneModel(
       if (isEdges && child.geometry) {
         const edgesGeom = new THREE.EdgesGeometry(child.geometry, 22);
         const edgesMat = new THREE.LineBasicMaterial({
-          color: isWireframe ? 0x00f0ff : 0x0f172a,
-          linewidth: 1.5,
+          color: isWireframe ? 0x00f0ff : 0x3a3a3a,
+          linewidth: 1,
           clippingPlanes: clippingPlane ? [clippingPlane] : [],
           transparent: isXRay,
-          opacity: isXRay ? 0.4 : 0.9,
+          opacity: isXRay ? 0.4 : 0.95,
         });
         const edges = new THREE.LineSegments(edgesGeom, edgesMat);
         edges.name = 'CADEdgeOutline';

@@ -10,7 +10,19 @@ import {
 import { runEngineeringValidation } from '../../engine/engineeringValidator';
 import { runComprehensiveCalculations } from '../../engineering/engineeringCalculations';
 import { generateBOM, runDFMAnalysis, getGDTFeatures } from '../../validation/dfmValidator';
-import { generateEngineeringChecksPDF } from '../../engine/pdfReportGenerator';
+import {
+  generateEngineeringChecksPDF,
+  generateEngineeringSummaryReportPDF,
+} from '../../engine/pdfReportGenerator';
+import { CadVantaLogoMark } from '../Brand/CadVantaLogo';
+import {
+  isImperial,
+  formatMass,
+  formatLength,
+  formatTolerance,
+  convertCalculationOutput,
+  convertDimensionsString,
+} from '../../utils/unitConversion';
 import {
   X,
   ShieldCheck,
@@ -27,6 +39,8 @@ import {
   Layers,
   Sparkles,
   Check,
+  Ruler,
+  Scale,
 } from 'lucide-react';
 
 interface EngineeringChecksModalProps {
@@ -34,6 +48,7 @@ interface EngineeringChecksModalProps {
   onClose: () => void;
   activePart: CADPart;
   onApplyFix?: (paramKey: string, autoFixValue: any) => void;
+  onUnitChange?: (unit: 'mm' | 'inch') => void;
 }
 
 export const EngineeringChecksModal: React.FC<EngineeringChecksModalProps> = ({
@@ -41,11 +56,14 @@ export const EngineeringChecksModal: React.FC<EngineeringChecksModalProps> = ({
   onClose,
   activePart,
   onApplyFix,
+  onUnitChange,
 }) => {
   const [activeTab, setActiveTab] = useState<'rules' | 'fea' | 'dfm' | 'bom'>('rules');
   const [notification, setNotification] = useState<string | null>(null);
 
   if (!isOpen) return null;
+
+  const isImperialUnit = isImperial(activePart.units);
 
   const geometricChecks: EngineeringCheck[] = runEngineeringValidation(activePart);
   const calculations: EngineeringCalculationResult[] = runComprehensiveCalculations(activePart);
@@ -73,8 +91,10 @@ export const EngineeringChecksModal: React.FC<EngineeringChecksModalProps> = ({
   };
 
   const handleGeneratePDF = () => {
-    generateEngineeringChecksPDF(activePart);
-    showNotification('Generated formal Engineering Validation PDF Report!');
+    generateEngineeringSummaryReportPDF(activePart, {
+      downloadImmediately: true,
+    });
+    showNotification('Generated formal 3-Page Engineering Summary PDF (Costs, FEA & DFM)!');
   };
 
   return (
@@ -94,13 +114,13 @@ export const EngineeringChecksModal: React.FC<EngineeringChecksModalProps> = ({
         {/* Modal Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-[rgba(16,185,129,0.2)] bg-[#071510] shrink-0">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-[#00F5A0]/10 border border-[#00F5A0]/30 text-[#00F5A0]">
-              <ShieldCheck className="w-5 h-5" />
+            <div className="p-1.5 rounded-xl bg-[#00F5A0]/10 border border-[#00F5A0]/30 flex items-center justify-center">
+              <CadVantaLogoMark size={26} />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-base font-bold text-[#F0FDF4] tracking-tight">
-                  Engineering Checks & DFM Validation
+                  <span className="text-[#00F5A0]">CADVANTA</span> Checks & DFM Validation
                 </h2>
                 <span
                   className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase border ${
@@ -125,6 +145,38 @@ export const EngineeringChecksModal: React.FC<EngineeringChecksModalProps> = ({
           </div>
 
           <div className="flex items-center gap-3">
+            {/* Unit System Toggle (Metric vs Imperial) */}
+            <div className="flex items-center bg-[#0B1E17] p-1 rounded-lg border border-[rgba(16,185,129,0.2)] text-xs">
+              <button
+                id="btn-eng-unit-metric"
+                type="button"
+                onClick={() => onUnitChange && onUnitChange('mm')}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded transition-all font-bold cursor-pointer ${
+                  !isImperialUnit
+                    ? 'bg-[#00F5A0] text-[#02140D] shadow-xs'
+                    : 'text-[#8CA89E] hover:text-[#F0FDF4]'
+                }`}
+                title="Display in Metric units (mm, cm³, kg, MPa)"
+              >
+                <Ruler className="w-3 h-3" />
+                <span>mm / kg</span>
+              </button>
+              <button
+                id="btn-eng-unit-imperial"
+                type="button"
+                onClick={() => onUnitChange && onUnitChange('inch')}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded transition-all font-bold cursor-pointer ${
+                  isImperialUnit
+                    ? 'bg-[#00F5A0] text-[#02140D] shadow-xs'
+                    : 'text-[#8CA89E] hover:text-[#F0FDF4]'
+                }`}
+                title="Display in Imperial units (in, in³, lb, ksi)"
+              >
+                <Scale className="w-3 h-3" />
+                <span>in / lb</span>
+              </button>
+            </div>
+
             {/* Prominent Generate PDF Summary Button in Header */}
             <button
               id="btn-generate-pdf-engineering-modal-header"
@@ -177,10 +229,10 @@ export const EngineeringChecksModal: React.FC<EngineeringChecksModalProps> = ({
           </div>
 
           <div className="p-2.5 rounded-lg bg-[#071911] border border-[rgba(16,185,129,0.2)]">
-            <div className="text-[10px] text-[#8CA89E] uppercase font-bold">Estimated Cost</div>
+            <div className="text-[10px] text-[#8CA89E] uppercase font-bold">Estimated Cost & Mass</div>
             <div className="text-sm font-bold text-[#00F5A0] mt-1">
               ₹ {Math.round(totalCost).toLocaleString('en-IN')}{' '}
-              <span className="text-[10px] font-normal text-[#8CA89E]">({totalMass.toFixed(2)} kg)</span>
+              <span className="text-[10px] font-normal text-[#8CA89E]">({formatMass(totalMass, activePart.units)})</span>
             </div>
           </div>
         </div>
@@ -360,6 +412,22 @@ export const EngineeringChecksModal: React.FC<EngineeringChecksModalProps> = ({
                       {calc.interpretation}
                     </p>
 
+                    {/* Dynamic Outputs Grid with Unit Conversion */}
+                    {calc.outputs && Object.keys(calc.outputs).length > 0 && (
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+                        {Object.entries(calc.outputs).slice(0, 4).map(([key, out]) => {
+                          const converted = convertCalculationOutput(out, activePart.units);
+                          return (
+                            <div key={key} className="bg-[#030E09] p-2 rounded border border-[rgba(16,185,129,0.15)]">
+                              <span className="text-[#8CA89E] block text-[10px] truncate">{converted.label}:</span>
+                              <span className="text-[#00F5A0] font-bold text-sm">{converted.value}</span>{' '}
+                              <span className="text-[#8CA89E] text-[10px]">{converted.unit}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
                     {calc.recommendations && calc.recommendations.length > 0 && (
                       <div className="bg-[#030E09] p-2.5 rounded-lg border border-[rgba(16,185,129,0.15)] text-xs text-[#00F5A0] space-y-1 font-mono">
                         {calc.recommendations.map((rec, rIdx) => (
@@ -400,7 +468,7 @@ export const EngineeringChecksModal: React.FC<EngineeringChecksModalProps> = ({
                   <div className="bg-[#030E09] p-2.5 rounded border border-[rgba(16,185,129,0.15)]">
                     <span className="text-[#8CA89E] block">Min Wall Thickness:</span>
                     <span className="text-[#F0FDF4] font-bold mt-1 block">
-                      {dfm.minWallThicknessMm} mm
+                      {formatLength(dfm.minWallThicknessMm, activePart.units)}
                     </span>
                   </div>
                 </div>
@@ -441,7 +509,7 @@ export const EngineeringChecksModal: React.FC<EngineeringChecksModalProps> = ({
                       </div>
 
                       <div className="flex items-center gap-3 text-xs shrink-0">
-                        <span className="text-[#00F5A0] font-bold">±{feat.toleranceMm} mm</span>
+                        <span className="text-[#00F5A0] font-bold">±{formatTolerance(feat.toleranceMm, activePart.units)}</span>
                         <span className="text-[#8CA89E]">Datum: {feat.datumA || 'A'}</span>
                       </div>
                     </div>
@@ -461,7 +529,7 @@ export const EngineeringChecksModal: React.FC<EngineeringChecksModalProps> = ({
                       <th className="py-2.5 px-3">#</th>
                       <th className="py-2.5 px-3">Part Name</th>
                       <th className="py-2.5 px-3">Material</th>
-                      <th className="py-2.5 px-3 text-right">Mass (kg)</th>
+                      <th className="py-2.5 px-3 text-right">Mass ({isImperialUnit ? 'lb' : 'kg'})</th>
                       <th className="py-2.5 px-3 text-right">Cost (INR)</th>
                       <th className="py-2.5 px-3">Method</th>
                     </tr>
@@ -472,7 +540,7 @@ export const EngineeringChecksModal: React.FC<EngineeringChecksModalProps> = ({
                         <td className="py-2.5 px-3 text-[#8CA89E]">{item.itemNumber}</td>
                         <td className="py-2.5 px-3 font-bold text-[#F0FDF4]">{item.partName}</td>
                         <td className="py-2.5 px-3 text-[#8CA89E]">{item.material}</td>
-                        <td className="py-2.5 px-3 text-right text-[#F0FDF4]">{item.totalMassKg.toFixed(2)}</td>
+                        <td className="py-2.5 px-3 text-right text-[#F0FDF4]">{formatMass(item.totalMassKg, activePart.units, false)}</td>
                         <td className="py-2.5 px-3 text-right text-[#00F5A0] font-bold">
                           ₹ {Math.round(item.totalCostInr || 0).toLocaleString('en-IN')}
                         </td>
